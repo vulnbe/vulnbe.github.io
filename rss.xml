@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"
+    xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <channel>
+        <title>vuln.be: hacks and tricks</title>
+        <link>https://vuln.be</link>
+        <description><![CDATA[Various interesting things related to security and engineering]]></description>
+        <atom:link href="https://vuln.be/rss.xml" rel="self"
+                   type="application/rss+xml" />
+        <lastBuildDate>Fri, 01 Apr 2022 00:00:00 UT</lastBuildDate>
+        <item>
+    <title>ModSecurity WAF in Kubernetes</title>
+    <link>https://vuln.be/post/kubernetes-modsecurity/</link>
+    <description><![CDATA[Using OWASP ModSecurity Core Rule Set and custom ModSecurity rules in Kubernetes NGINX Ingress controller to block Spring4Shell (CVE-2022-22965) exploits.]]></description>
+    <pubDate>Fri, 01 Apr 2022 00:00:00 UT</pubDate>
+    <guid>https://vuln.be/post/kubernetes-modsecurity/</guid>
+    <dc:creator>Alexey Pronin</dc:creator>
+</item>
+<item>
+    <title>OS command and code execution in Erlang and Elixir applications</title>
+    <link>https://vuln.be/post/os-command-and-code-execution-in-erlang-and-elixir/</link>
+    <description><![CDATA[Execution of OS commands and code evaluation are dangerous operations when they use untrusted user input. This post reviews Erlang and Elixir functions related to the topic.
+]]></description>
+    <pubDate>Thu, 14 Jan 2021 00:00:00 UT</pubDate>
+    <guid>https://vuln.be/post/os-command-and-code-execution-in-erlang-and-elixir/</guid>
+    <dc:creator>Alexey Pronin</dc:creator>
+</item>
+<item>
+    <title>XML External Entity in Erlang and Elixir</title>
+    <link>https://vuln.be/post/xxe-in-erlang-and-elixir/</link>
+    <description><![CDATA[Some Erlang and Elixir XML libraries prevent XXE by default, and some allow embedding external entities, so it is necessary to make an effort to secure the application from potential vulnerabilities.]]></description>
+    <pubDate>Wed, 07 Oct 2020 00:00:00 UT</pubDate>
+    <guid>https://vuln.be/post/xxe-in-erlang-and-elixir/</guid>
+    <dc:creator>Alexey Pronin</dc:creator>
+</item>
+<item>
+    <title>XXE and OS command injections in Yaws</title>
+    <link>https://vuln.be/post/yaws-xxe-and-shell-injections/</link>
+    <description><![CDATA[Yaws is a web server for Erlang applications. As a result of research, I found an XXE injection in a WebDAV module and OS command injection in a CGI module.]]></description>
+    <pubDate>Mon, 07 Sep 2020 00:00:00 UT</pubDate>
+    <guid>https://vuln.be/post/yaws-xxe-and-shell-injections/</guid>
+    <dc:creator>Alexey Pronin</dc:creator>
+</item>
+<item>
+    <title>OS command injection in Rebar3</title>
+    <link>https://vuln.be/post/rebar3-command-injection/</link>
+    <description><![CDATA[<p>Rebar3 is a tool widely used for building applications in the Erlang world. It is quite dangerous. With the tool, you can get OS command execution in different ways and sometimes in ways not intended by developers.</p>
+]]></description>
+    <pubDate>Tue, 01 Sep 2020 00:00:00 UT</pubDate>
+    <guid>https://vuln.be/post/rebar3-command-injection/</guid>
+    <dc:creator>Alexey Pronin</dc:creator>
+</item>
+<item>
+    <title>Controversial certificate management using Step</title>
+    <link>https://vuln.be/post/controversial-ca-using-step/</link>
+    <description><![CDATA[<p>DevOps methodology implies faster development, increased reliability, and sometimes security. Many new tools have emerged to fulfill the DevOps needs. Many of them rely on the PKI or even manage the PKI somehow.</p>
+]]></description>
+    <pubDate>Sat, 18 Jul 2020 00:00:00 UT</pubDate>
+    <guid>https://vuln.be/post/controversial-ca-using-step/</guid>
+    <dc:creator>Alexey Pronin</dc:creator>
+</item>
+<item>
+    <title>Microsoft Office 365 email spoofing</title>
+    <link>https://vuln.be/post/microsoft-spoofing/</link>
+    <description><![CDATA[<p>«Securely run and grow your business» - says the advertisment on the Microsoft webpage that tells about email services for business customers.</p>
+<p>Not belive!</p>
+]]></description>
+    <pubDate>Mon, 19 Nov 2018 00:00:00 UT</pubDate>
+    <guid>https://vuln.be/post/microsoft-spoofing/</guid>
+    <dc:creator>Alexey Pronin</dc:creator>
+</item>
+<item>
+    <title>Short story about «Orion Pro»: access control system without access control</title>
+    <link>https://vuln.be/post/orion-bolid/</link>
+    <description><![CDATA[<p>Once during a pentest on one of the hosts on WI-FI network I discovered a lot of open ports (XML-RPC).</p>
+]]></description>
+    <pubDate>Thu, 06 Sep 2018 00:00:00 UT</pubDate>
+    <guid>https://vuln.be/post/orion-bolid/</guid>
+    <dc:creator>Alexey Pronin</dc:creator>
+</item>
+<item>
+    <title>MacOS local DNS</title>
+    <link>https://vuln.be/post/macos-dns/</link>
+    <description><![CDATA[<p>Sometimes you need to use DNS on non-standard port. MacOS does not allow that. The following recipe helps to overcome this restriction.</p>
+]]></description>
+    <pubDate>Tue, 04 Sep 2018 00:00:00 UT</pubDate>
+    <guid>https://vuln.be/post/macos-dns/</guid>
+    <dc:creator>Alexey Pronin</dc:creator>
+</item>
+<item>
+    <title>Burp Suite Pro 1.7.31 Loader & Keygen reverse engineering</title>
+    <link>https://vuln.be/post/burpsuite-serferxyz/</link>
+    <description><![CDATA[<p>One sleepless night I decided to investigate how Burp Suite Pro 1.7.31 Loader &amp; Keygen written by surferxyz works.</p>
+]]></description>
+    <pubDate>Thu, 12 Jul 2018 00:00:00 UT</pubDate>
+    <guid>https://vuln.be/post/burpsuite-serferxyz/</guid>
+    <dc:creator>Alexey Pronin</dc:creator>
+</item>
+
+    </channel>
+</rss>

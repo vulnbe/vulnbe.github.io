@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="author" content="Alexey Pronin">
+  
+  <link rel="canonical" href="../../post/microsoft-spoofing/" />
+  <meta name="theme-color" content="#563d7c">
+  
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+  <title>Microsoft Office 365 email spoofing - vuln.be</title>
+  <link href="../../css/main.css" rel="stylesheet">
+  
+  <link rel="alternate" type="application/atom+xml" href="../../atom.xml" title="vuln.be Atom Feed">
+  <link rel="alternate" type="application/rss+xml" href="../../rss.xml" title="vuln.be RSS Feed">
+</head>
+
+<body>
+  <div class="container">
+    <header class="blog-header py-3">
+      <div class="row flex-nowrap justify-content-between align-items-center">
+        <div class="col-12 text-center">
+          <a class="blog-header-logo text-dark" href="../../">VULN.BE</a>
+      </div>
+    </header>
+
+    <div class="nav-scroller py-1 mb-4 border-bottom">
+      <nav class="nav d-flex justify-content-between">
+        <a class="p-2 text-muted" href="../../">Home</a><a class="p-2 text-muted" href="../../tags/">Tags</a><a class="p-2 text-muted" href="../../archives/">Archives</a><a class="p-2 text-muted" href="../../page/contacts/">Contacts</a><a class="p-2 text-muted" href="../../page/about/">About</a>
+      </nav>
+    </div>
+    
+    <div class="blog-main px-2 my-4">
+      <div class="blog-post">
+  <div class="blog-post-meta font-weight-light">
+    <time datetime="2018-11-19" pubdate class="text-uppercase" data-updated="true">19 November 2018</time>
+    <div class="tags text-lowercase"><a href="../../tags/microsoft/">microsoft</a> | <a href="../../tags/office 365/">office 365</a> | <a href="../../tags/outlook/">outlook</a> | <a href="../../tags/phishing/">phishing</a> | <a href="../../tags/spoofing/">spoofing</a></div>
+  </div>
+  <h1 class><a href="../../post/microsoft-spoofing/">Microsoft Office 365 email spoofing</a></h1>
+  
+  <div class="mb-4 post-content">
+    <p>«Securely run and grow your business» - says the advertisment on the Microsoft webpage that tells about email services for business customers.</p>
+<p>Not belive!</p>
+<!--more-->
+<p>Microsoft Office 365 is a good service for phishing attacks.</p>
+<p>To use the Office 365 mail service for your domain, you need to configure the MX record to point to a specific mail relay (specific for each customer).</p>
+<p>The domain name might be something like <strong>megacorpone-com.mail.protection.outlook.com</strong> for a customer with the website <code>megacorpone.com</code></p>
+<p>You can identify a customer by requesting the MX record:</p>
+<pre class="conf"><code>&gt; dig megacorpone.com MX
+
+;; ANSWER SECTION:
+megacorpone.com.		90	IN	MX	0 megacorpone-com.mail.protection.outlook.com.</code></pre>
+<p>Normally, the messages that failed the sender check should be rejected according to the SPF:</p>
+<pre class="conf"><code>&gt; dig megacorpone.com TXT
+
+;; ANSWER SECTION:
+megacorpone.com.		2394	IN	TXT	&quot;v=spf1 include:spf.megacorpone.com include:spf.protection.outlook.com -all&quot;</code></pre>
+<p>However, SPF policy does not work for Microsoft mail relays.</p>
+<p>The sender field can be tampered with.</p>
+<p><strong>No authentication is needed to send a fake email using such Microsoft relays. Spoofed email won’t fall into spam. The OWA interface won’t show any warnings and will even load the user’s avatar if it exists.</strong></p>
+<p><img src="../../images/microsoft-spoof.png" /></p>
+<p>At the end of 2018 Microsoft can’t configure their mail servers.</p>
+<p>The bug was reported to Microsoft years ago, but still hasn’t been fixed.</p>
+  </div>
+  
+</div>
+
+    </div>
+    <footer class="p-2 d-flex justify-content-between blog-footer font-weight-lighter border-top">
+      <p>Copyright © 2023 Alexey Pronin</p>
+      <p>Powered by <a href="https://jaspervdj.be/hakyll/">Hakyll</a>.</p>
+    </footer>
+  </div>
+  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
+</body>
+</html>

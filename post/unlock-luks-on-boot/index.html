@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="author" content="Alexey Pronin">
+  
+  <link rel="canonical" href="../../post/unlock-luks-on-boot/" />
+  <meta name="theme-color" content="#563d7c">
+  
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+  <title>Auto unlocking encrypted root volumes - vuln.be</title>
+  <link href="../../css/main.css" rel="stylesheet">
+  
+  <link rel="alternate" type="application/atom+xml" href="../../atom.xml" title="vuln.be Atom Feed">
+  <link rel="alternate" type="application/rss+xml" href="../../rss.xml" title="vuln.be RSS Feed">
+</head>
+
+<body>
+  <div class="container">
+    <header class="blog-header py-3">
+      <div class="row flex-nowrap justify-content-between align-items-center">
+        <div class="col-12 text-center">
+          <a class="blog-header-logo text-dark" href="../../">VULN.BE</a>
+      </div>
+    </header>
+
+    <div class="nav-scroller py-1 mb-4 border-bottom">
+      <nav class="nav d-flex justify-content-between">
+        <a class="p-2 text-muted" href="../../">Home</a><a class="p-2 text-muted" href="../../tags/">Tags</a><a class="p-2 text-muted" href="../../archives/">Archives</a><a class="p-2 text-muted" href="../../page/contacts/">Contacts</a><a class="p-2 text-muted" href="../../page/about/">About</a>
+      </nav>
+    </div>
+    
+    <div class="blog-main px-2 my-4">
+      <div class="blog-post">
+  <div class="blog-post-meta font-weight-light">
+    <time datetime="2018-01-03" pubdate class="text-uppercase" data-updated="true"> 3 January 2018</time>
+    <div class="tags text-lowercase"><a href="../../tags/cryptsetup/">cryptsetup</a> | <a href="../../tags/luks/">luks</a> | <a href="../../tags/usb/">usb</a> | <a href="../../tags/key/">key</a> | <a href="../../tags/passdev/">passdev</a> | <a href="../../tags/keyscript/">keyscript</a> | <a href="../../tags/crypttab/">crypttab</a> | <a href="../../tags/fstab/">fstab</a> | <a href="../../tags/systemd/">systemd</a> | <a href="../../tags/patch/">patch</a> | <a href="../../tags/debuild/">debuild</a></div>
+  </div>
+  <h1 class><a href="../../post/unlock-luks-on-boot/">Auto unlocking encrypted root volumes</a></h1>
+  
+  <div class="mb-4 post-content">
+    <p>Sometimes it is necessary that the system disk is encrypted and the system is loaded automatically. In this short outline i will focus on how to make it work.</p>
+<!--more-->
+<p>I will use the key file on the USB storage device. You must consider the risks of using such configuration.</p>
+<p>Create key:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true"></a><span class="fu">dd</span> if=/dev/random of=secretkey bs=1 count=4096</span></code></pre></div>
+<p>Add the key to your LUKS volume:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true"></a><span class="ex">cryptsetup</span> luksAddKey /dev/your_luks_dev secretkey</span></code></pre></div>
+<p>Copy the key to your usb storage (it is ext3 filesystem and labeled ‘USBCRYPT’ in my case).</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true"></a><span class="fu">mount</span> /dev/disk/by-label/USBCRYPT /mnt</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true"></a><span class="fu">cp</span> secretkey /mnt/</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true"></a><span class="fu">umount</span> /mnt</span></code></pre></div>
+<p>Edit volume record in /etc/crypttab:</p>
+<p><em>Before:</em></p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true"></a><span class="ex">root_volume_crypt</span> UUID=714e7ed2-af19-4214-8981-34ba71652bf7 none luks</span></code></pre></div>
+<p><em>After:</em></p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true"></a><span class="ex">root_volume_crypt</span> UUID=714e7ed2-af19-4214-8981-34ba71652bf7 /dev/disk/by-label/USBCRYPT:/secretkey luks,keyscript=/lib/cryptsetup/scripts/passdev</span></code></pre></div>
+<p>Check whether the file /lib/cryptsetup/scripts/passdev exists in your setup.</p>
+<p>If you have other partitions that you want to mount after boot, the records for them will look like this:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true"></a><span class="ex">another_volume_crypt</span> UUID=11f68a35-9fac-4f2b-81d2-593f739c8273 /path/to/anothersecretkey luks</span></code></pre></div>
+<p>Do not forget to configure mounts in /etc/fstab:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true"></a><span class="ex">/dev/mapper/root_volume_crypt</span> / ext4 errors=remount-ro,nodelalloc,data=ordered 0 1</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true"></a><span class="ex">/dev/mapper/another_volume_crypt</span> /your/mountpoint ext4 defaults,nodelalloc,data=ordered,user,users,nodev 0 2</span></code></pre></div>
+<p>After that I got some problems using this configuration because of one volume was mounted by passdev script and the others by systemd.</p>
+<p>Systemd waited for the already mounted drive 90 seconds during boot. This timer could not be disabled because the systemd automatically generated the service from the template using systemd-cryptsetup-generator.</p>
+<p>I did not find any simple and beautiful way to solve it and I had to make a patch.</p>
+<p>This is it:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode diff"><code class="sourceCode diff"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true"></a><span class="kw">diff --git a/src/cryptsetup/cryptsetup-generator.c b/src/cryptsetup/cryptsetup-generator.c</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true"></a>index 2d00bcf..0ca9c4b 100644</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true"></a><span class="dt">--- a/src/cryptsetup/cryptsetup-generator.c</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true"></a><span class="dt">+++ b/src/cryptsetup/cryptsetup-generator.c</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true"></a><span class="dt">@@ -384,6 +384,7 @@ static int add_crypttab_devices(void) {</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true"></a>                 char line[LINE_MAX], *l, *uuid;</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true"></a>                 crypto_device *d = NULL;</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true"></a>                 _cleanup_free_ char *name = NULL, *device = NULL, *keyfile = NULL, *options = NULL;</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true"></a><span class="va">+                bool keyscript;</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true"></a> </span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true"></a>                 if (!fgets(line, sizeof(line), f))</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true"></a>                         break;</span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true"></a><span class="dt">@@ -413,6 +414,12 @@ static int add_crypttab_devices(void) {</span></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true"></a>                         continue;</span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true"></a>                 }</span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true"></a> </span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true"></a><span class="va">+                keyscript = fstab_test_option(options, &quot;keyscript\0&quot;);</span></span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true"></a><span class="va">+                if (keyscript) {</span></span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true"></a><span class="va">+                        log_info(&quot;Not creating device '%s' because it has keyscript option.&quot;, name);</span></span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true"></a><span class="va">+                        continue;</span></span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true"></a><span class="va">+                }</span></span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true"></a><span class="va">+</span></span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true"></a>                 r = create_disk(name, device, keyfile, (d &amp;&amp; d-&gt;options) ? d-&gt;options : options);</span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true"></a>                 if (r &lt; 0)</span>
+<span id="cb8-25"><a href="#cb8-25" aria-hidden="true"></a>                         return r;</span></code></pre></div>
+<p>I used Docker for compiling and building systemd debian package.</p>
+<p><em>Dockerfile</em>:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode dockerfile"><code class="sourceCode dockerfile"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true"></a><span class="kw">FROM</span> debian:9</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true"></a></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true"></a><span class="kw">RUN</span> echo <span class="st">&quot;deb-src http://ftp.ru.debian.org/debian/ stretch main non-free contrib&quot;</span> &gt;&gt; /etc/apt/sources.list &amp;&amp; \</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true"></a>    apt update &amp;&amp; \</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true"></a>    apt install -y dpkg-dev devscripts &amp;&amp; \</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true"></a>    apt build-dep -y systemd</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true"></a></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true"></a><span class="kw">RUN</span> apt install -y nano</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true"></a></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true"></a><span class="kw">RUN</span> useradd -m builder</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true"></a></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true"></a><span class="kw">WORKDIR</span> /home/builder</span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true"></a><span class="kw">USER</span> builder</span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true"></a><span class="kw">ENTRYPOINT</span> [ <span class="st">&quot;bash&quot;</span> ]</span></code></pre></div>
+<p>Systemd docker image build command:</p>
+<pre><code>docker build -t systemd .</code></pre>
+<p>Systemd docker container run command:</p>
+<pre><code>docker run -it --rm --name systemd -v $(pwd)/data:/home/builder -v $(pwd)/patch:/patch systemd</code></pre>
+<p>Systemd package build command sequence:</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true"></a><span class="ex">apt</span> source systemd</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true"></a><span class="bu">cd</span> systemd-*</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true"></a><span class="fu">git</span> apply /patch</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true"></a><span class="ex">dpkg-source</span> --commit</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true"></a><span class="ex">debuild</span> -us -uc</span></code></pre></div>
+<p>You will get several <em>.deb</em> packages. <em>systemd-cryptsetup-generator</em> is in systemd_232-*.deb.</p>
+  </div>
+  
+</div>
+
+    </div>
+    <footer class="p-2 d-flex justify-content-between blog-footer font-weight-lighter border-top">
+      <p>Copyright © 2023 Alexey Pronin</p>
+      <p>Powered by <a href="https://jaspervdj.be/hakyll/">Hakyll</a>.</p>
+    </footer>
+  </div>
+  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
+</body>
+</html>

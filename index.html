@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="author" content="Alexey Pronin">
+  
+  <link rel="canonical" href="./" />
+  <meta name="theme-color" content="#563d7c">
+  
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+  <title>Latest blog posts - vuln.be</title>
+  <link href="./css/main.css" rel="stylesheet">
+  
+  <link rel="alternate" type="application/atom+xml" href="./atom.xml" title="vuln.be Atom Feed">
+  <link rel="alternate" type="application/rss+xml" href="./rss.xml" title="vuln.be RSS Feed">
+</head>
+
+<body>
+  <div class="container">
+    <header class="blog-header py-3">
+      <div class="row flex-nowrap justify-content-between align-items-center">
+        <div class="col-12 text-center">
+          <a class="blog-header-logo text-dark" href="./">VULN.BE</a>
+      </div>
+    </header>
+
+    <div class="nav-scroller py-1 mb-4 border-bottom">
+      <nav class="nav d-flex justify-content-between">
+        <a class="p-2 text-muted" href="./">Home</a><a class="p-2 text-muted" href="./tags/">Tags</a><a class="p-2 text-muted" href="./archives/">Archives</a><a class="p-2 text-muted" href="./page/contacts/">Contacts</a><a class="p-2 text-muted" href="./page/about/">About</a>
+      </nav>
+    </div>
+    
+    <div class="px-2 content-header font-weight-lighter">
+      Latest blog posts
+    </div>
+    
+    <div class="blog-main px-2 my-4">
+      
+  <div class="blog-post">
+  <div class="blog-post-meta font-weight-light">
+    <time datetime="2022-04-01" pubdate class="text-uppercase" data-updated="true"> 1 April 2022</time>
+    <div class="tags text-lowercase"><a href="./tags/kubernetes/">kubernetes</a> | <a href="./tags/k8s/">k8s</a> | <a href="./tags/nginx/">nginx</a> | <a href="./tags/modsecurity/">modsecurity</a> | <a href="./tags/waf/">waf</a> | <a href="./tags/ingress/">ingress</a> | <a href="./tags/Spring4Shell/">Spring4Shell</a> | <a href="./tags/CVE-2022-22965/">CVE-2022-22965</a> | <a href="./tags/OWASP/">OWASP</a></div>
+  </div>
+  <h1 class><a href="./post/kubernetes-modsecurity/">ModSecurity WAF in Kubernetes</a></h1>
+  
+  <p>It might be necessary to apply some mitigation using external tools to give Dev teams more time to fix critical vulnerabilities, especially for large codebases. Employing Web Application Firewall could be such a temporary solution.</p>
+<p>The article covers setting up a test Kubernetes environment with NGINX Ingress controller and ModSecurity WAF to block Spring RCE (CVE-2022-22965), known as Spring4Shell.</p>
+
+  <div class="blog-post-meta pb-4 border-bottom"><a href="./post/kubernetes-modsecurity/">Read more</a></div>
+  
+</div>
+
+
+  <div class="blog-post">
+  <div class="blog-post-meta font-weight-light">
+    <time datetime="2021-01-14" pubdate class="text-uppercase" data-updated="true">14 January 2021</time>
+    <div class="tags text-lowercase"><a href="./tags/os command injection/">os command injection</a> | <a href="./tags/code execution/">code execution</a> | <a href="./tags/erlang/">erlang</a> | <a href="./tags/elixir/">elixir</a></div>
+  </div>
+  <h1 class><a href="./post/os-command-and-code-execution-in-erlang-and-elixir/">OS command and code execution in Erlang and Elixir applications</a></h1>
+  
+  <p>Sometimes you need to execute commands in the OS. How can you achieve that in Erlang and Elixir, and how can you do it securely?</p>
+<p>Here you will find information that may be of interest both from a development and an attack point of view.</p>
+
+  <div class="blog-post-meta pb-4 border-bottom"><a href="./post/os-command-and-code-execution-in-erlang-and-elixir/">Read more</a></div>
+  
+</div>
+
+
+  <div class="blog-post">
+  <div class="blog-post-meta font-weight-light">
+    <time datetime="2020-10-07" pubdate class="text-uppercase" data-updated="true"> 7 October 2020</time>
+    <div class="tags text-lowercase"><a href="./tags/xxe/">xxe</a> | <a href="./tags/injection/">injection</a> | <a href="./tags/xml/">xml</a> | <a href="./tags/parsers/">parsers</a> | <a href="./tags/erlang/">erlang</a> | <a href="./tags/elixir/">elixir</a></div>
+  </div>
+  <h1 class><a href="./post/xxe-in-erlang-and-elixir/">XML External Entity in Erlang and Elixir</a></h1>
+  
+  <p>Processing XML documents requires taking into account the possibility of an XML eXternal Entity injection attack (XXE).</p>
+<p>The vulnerability arises when XML parser processes unverified data containing reference to an external entity.</p>
+<p>XXE belongs to category A4 in <a href="https://www.owasp.org/index.php/Category:OWASP_Top_Ten_Project">OWASP Top 10</a> list of vulnerabilities.</p>
+<p>In this publication, I will review how secure by default the popular XML parsers for Erlang and Elixir are.</p>
+
+  <div class="blog-post-meta pb-4 border-bottom"><a href="./post/xxe-in-erlang-and-elixir/">Read more</a></div>
+  
+</div>
+
+
+  <div class="blog-post">
+  <div class="blog-post-meta font-weight-light">
+    <time datetime="2020-09-07" pubdate class="text-uppercase" data-updated="true"> 7 September 2020</time>
+    <div class="tags text-lowercase"><a href="./tags/xxe/">xxe</a> | <a href="./tags/shell injection/">shell injection</a> | <a href="./tags/injection/">injection</a> | <a href="./tags/yaws/">yaws</a> | <a href="./tags/CVE/">CVE</a> | <a href="./tags/CVE-2020-24379/">CVE-2020-24379</a> | <a href="./tags/CVE-2020-24916/">CVE-2020-24916</a> | <a href="./tags/erlang/">erlang</a></div>
+  </div>
+  <h1 class><a href="./post/yaws-xxe-and-shell-injections/">XXE and OS command injections in Yaws</a></h1>
+  
+  <p>Yaws is a web server for dynamic-content web applications written in Erlang. The server includes several modules, typical for web servers. As a result of research, I found an XXE injection in a WebDAV module and OS command injection in a CGI module.</p>
+
+  <div class="blog-post-meta pb-4 border-bottom"><a href="./post/yaws-xxe-and-shell-injections/">Read more</a></div>
+  
+</div>
+
+
+  <div class="blog-post">
+  <div class="blog-post-meta font-weight-light">
+    <time datetime="2020-09-01" pubdate class="text-uppercase" data-updated="true"> 1 September 2020</time>
+    <div class="tags text-lowercase"><a href="./tags/rebar3/">rebar3</a> | <a href="./tags/os command injection/">os command injection</a> | <a href="./tags/CVE-2020-13802/">CVE-2020-13802</a> | <a href="./tags/shell injection/">shell injection</a> | <a href="./tags/injection/">injection</a> | <a href="./tags/CVE/">CVE</a> | <a href="./tags/erlang/">erlang</a></div>
+  </div>
+  <h1 class><a href="./post/rebar3-command-injection/">OS command injection in Rebar3</a></h1>
+  
+  <p>Rebar3 is a tool widely used for building applications in the Erlang world. It is quite dangerous. With the tool, you can get OS command execution in different ways and sometimes in ways not intended by developers.</p>
+
+  <div class="blog-post-meta pb-4 border-bottom"><a href="./post/rebar3-command-injection/">Read more</a></div>
+  
+</div>
+
+
+
+
+<nav class="blog-pagination">
+  <p>You can find more in the <a href="./archives/">archives</a>.</p>
+  
+  <a class="btn btn-outline-primary" href="./posts/2/index.html">Older</a>
+  
+  
+  <a class="btn btn-outline-secondary disabled" href="#" tabindex="-1" aria-disabled="true">Newer</a>
+  
+</nav>
+
+
+    </div>
+    <footer class="p-2 d-flex justify-content-between blog-footer font-weight-lighter border-top">
+      <p>Copyright © 2023 Alexey Pronin</p>
+      <p>Powered by <a href="https://jaspervdj.be/hakyll/">Hakyll</a>.</p>
+    </footer>
+  </div>
+  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
+</body>
+</html>

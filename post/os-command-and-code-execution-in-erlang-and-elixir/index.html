@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="author" content="Alexey Pronin">
+  
+  <link rel="canonical" href="../../post/os-command-and-code-execution-in-erlang-and-elixir/" />
+  <meta name="theme-color" content="#563d7c">
+  
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+  <title>OS command and code execution in Erlang and Elixir applications - vuln.be</title>
+  <link href="../../css/main.css" rel="stylesheet">
+  
+  <meta name="twitter:card" content="summary" />
+  <meta property="og:url" content="https://vuln.be/post/os-command-and-code-execution-in-erlang-and-elixir/" />
+  <meta property="og:description" content="Execution of OS commands and code evaluation are dangerous operations when they use untrusted user input. This post reviews Erlang and Elixir functions related to the topic.
+" />
+  <meta name="twitter:creator" content="@vulnbe" />
+  <meta property="og:title" content="OS command and code execution in Erlang and Elixir applications" />
+  <meta property="og:image" content="https://vuln.be/images/elixir-eval.png" />
+  
+  <link rel="alternate" type="application/atom+xml" href="../../atom.xml" title="vuln.be Atom Feed">
+  <link rel="alternate" type="application/rss+xml" href="../../rss.xml" title="vuln.be RSS Feed">
+</head>
+
+<body>
+  <div class="container">
+    <header class="blog-header py-3">
+      <div class="row flex-nowrap justify-content-between align-items-center">
+        <div class="col-12 text-center">
+          <a class="blog-header-logo text-dark" href="../../">VULN.BE</a>
+      </div>
+    </header>
+
+    <div class="nav-scroller py-1 mb-4 border-bottom">
+      <nav class="nav d-flex justify-content-between">
+        <a class="p-2 text-muted" href="../../">Home</a><a class="p-2 text-muted" href="../../tags/">Tags</a><a class="p-2 text-muted" href="../../archives/">Archives</a><a class="p-2 text-muted" href="../../page/contacts/">Contacts</a><a class="p-2 text-muted" href="../../page/about/">About</a>
+      </nav>
+    </div>
+    
+    <div class="blog-main px-2 my-4">
+      <div class="blog-post">
+  <div class="blog-post-meta font-weight-light">
+    <time datetime="2021-01-14" pubdate class="text-uppercase" data-updated="true">14 January 2021</time>
+    <div class="tags text-lowercase"><a href="../../tags/os command injection/">os command injection</a> | <a href="../../tags/code execution/">code execution</a> | <a href="../../tags/erlang/">erlang</a> | <a href="../../tags/elixir/">elixir</a></div>
+  </div>
+  <h1 class><a href="../../post/os-command-and-code-execution-in-erlang-and-elixir/">OS command and code execution in Erlang and Elixir applications</a></h1>
+  
+  <div class="mb-4 post-content">
+    <p>Sometimes you need to execute commands in the OS. How can you achieve that in Erlang and Elixir, and how can you do it securely?</p>
+<p>Here you will find information that may be of interest both from a development and an attack point of view.</p>
+<!--more-->
+<h2 id="os-command-execution">OS command execution</h2>
+<h3 id="os-module"><a href="https://erlang.org/doc/man/os.html">os module</a></h3>
+<p>The simplest way to execute something in the OS is to use function <code>cmd</code>.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode erlang"><code class="sourceCode erlang"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true"></a><span class="fu">os:cmd(</span><span class="st">&quot;cat /etc/passwd&quot;</span><span class="fu">).</span></span></code></pre></div>
+<p>The response will be a string from stdout or stderr. <strong>There is no separation between commands and arguments</strong>.</p>
+<div class="card">
+<div class="card-body">
+<p>The insecure analog in Elixir is <code>:os.cmd/1,2</code></p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode elixir"><code class="sourceCode elixir"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true"></a><span class="va">:os</span><span class="op">.</span>cmd(:<span class="st">&quot;cat /etc/passwd&quot;</span>)</span></code></pre></div>
+</div>
+</div>
+<h3 id="open_port-of-erlang-module"><a href="https://erlang.org/doc/man/erlang.html#open_port-2">open_port</a> of erlang module</h3>
+<h4 id="spawn">spawn</h4>
+<div class="sourceCode" id="cb3"><pre class="sourceCode erlang"><code class="sourceCode erlang"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true"></a><span class="va">Command</span> <span class="op">=</span> <span class="st">&quot;ls &gt; ls.results&quot;</span><span class="fu">,</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true"></a><span class="va">PortSettings</span> <span class="op">=</span> <span class="fu">[</span><span class="ch">exit_status</span><span class="fu">,</span> <span class="fu">{</span><span class="ch">line</span><span class="fu">,</span> <span class="dv">16384</span><span class="fu">},</span> <span class="ch">use_stdio</span><span class="fu">,</span> <span class="ch">stderr_to_stdout</span><span class="fu">,</span> <span class="ch">hide</span><span class="fu">,</span> <span class="ch">eof</span><span class="fu">,</span> <span class="ch">binary</span><span class="fu">],</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true"></a><span class="va">Port</span> <span class="op">=</span> <span class="fu">open_port({spawn,</span> <span class="va">Command</span><span class="fu">},</span> <span class="va">PortSettings</span><span class="fu">).</span></span></code></pre></div>
+<p><code>open_port</code> with <code>spawn</code> starts an external program specified in tuple.</p>
+<p>For external programs, PATH is searched (or an equivalent method is used to find programs, depending on the OS). <strong>This is done by invoking the shell on certain platforms. The first space-separated token of the command is considered as the name of the executable (or driver).</strong> This makes this option unsuitable for running programs with spaces in filenames or directory names.</p>
+<div class="card">
+<div class="card-body">
+<p>The insecure analog in Elixir is <code>Port.open</code> with <code>:spawn</code> as a first parameter.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode elixir"><code class="sourceCode elixir"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true"></a><span class="cn">Port</span><span class="op">.</span>open({<span class="va">:spawn</span>, <span class="st">&quot;cat /etc/passwd&quot;</span>}, [<span class="va">:binary</span>])</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true"></a>flush()</span></code></pre></div>
+</div>
+</div>
+<h4 id="spawn_executable">spawn_executable</h4>
+<div class="sourceCode" id="cb5"><pre class="sourceCode erlang"><code class="sourceCode erlang"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true"></a><span class="va">Command</span> <span class="op">=</span> <span class="st">&quot;ls&quot;</span><span class="fu">,</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true"></a><span class="va">PortSettings</span> <span class="op">=</span> <span class="fu">[</span><span class="ch">exit_status</span><span class="fu">,</span> <span class="fu">{</span><span class="ch">line</span><span class="fu">,</span> <span class="dv">16384</span><span class="fu">},</span> <span class="ch">use_stdio</span><span class="fu">,</span> <span class="ch">stderr_to_stdout</span><span class="fu">,</span> <span class="ch">hide</span><span class="fu">,</span> <span class="ch">eof</span><span class="fu">,</span> <span class="ch">binary</span><span class="fu">],</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true"></a><span class="va">Port</span> <span class="op">=</span> <span class="fu">open_port({</span><span class="ch">spawn_executable</span><span class="fu">,</span> <span class="va">Command</span><span class="fu">},</span> <span class="va">PortSettings</span><span class="fu">).</span></span></code></pre></div>
+<p><code>{spawn_executable, FileName}</code> works like <code>{spawn, FileName}</code>, but only runs external executables. FileName in its whole is used as the name of the executable, including any spaces. If arguments are to be passed, the PortSettings args can be used.</p>
+<p><strong>The shell is usually not invoked to start the program</strong>, it is executed directly. <strong>PATH (or equivalent) is not searched</strong>. To find a program in PATH to execute, use <code>os:find_executable/1</code>.</p>
+<div class="card">
+<div class="card-body">
+<p>The secure analog in Elixir is <code>Port.open</code> with <code>:spawn_executable</code> as a first parameter, and any arguments passed using the <code>:args</code> option.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode elixir"><code class="sourceCode elixir"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true"></a>path <span class="op">=</span> <span class="cn">System</span><span class="op">.</span>find_executable(<span class="st">&quot;cat&quot;</span>)</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true"></a>port <span class="op">=</span> <span class="cn">Port</span><span class="op">.</span>open({<span class="va">:spawn_executable</span>, path}, [<span class="va">:binary</span>, <span class="va">args:</span> [<span class="st">&quot;/etc/passwd&quot;</span>]])</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true"></a>flush()</span></code></pre></div>
+<p>Also in Elixir, you can use <code>System.cmd/2,3</code>:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode elixir"><code class="sourceCode elixir"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true"></a><span class="cn">System</span><span class="op">.</span>cmd(<span class="st">&quot;cat&quot;</span>, [<span class="st">&quot;/etc/passwd&quot;</span>])</span></code></pre></div>
+</div>
+</div>
+<h4 id="spawn_driver">spawn_driver</h4>
+<p>It works like <code>{spawn, Command}</code>, but <strong>demands the first (space-separated) token of the command to be the name of a loaded driver</strong>. If no driver with that name is loaded, a badarg error is raised.</p>
+<h2 id="code-execution">Code execution</h2>
+<h3 id="erl_eval-module"><a href="http://erlang.org/doc/man/erl_eval.html">erl_eval module</a></h3>
+<p>The <code>erl_eval</code> module functions allow you to execute Erlang code. You have to use expressions with functions mentioned above to execute code in OS.</p>
+<p>The following are two expressions that execute <code>ls</code> in the operating system.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode erlang"><code class="sourceCode erlang"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true"></a><span class="va">Expression</span> <span class="op">=</span> <span class="fu">{</span><span class="ch">call</span><span class="fu">,</span><span class="dv">1</span><span class="fu">,{</span><span class="ch">remote</span><span class="fu">,</span><span class="dv">1</span><span class="fu">,{</span><span class="ch">atom</span><span class="fu">,</span><span class="dv">1</span><span class="fu">,</span><span class="ch">os</span><span class="fu">},{</span><span class="ch">atom</span><span class="fu">,</span><span class="dv">1</span><span class="fu">,</span><span class="ch">cmd</span><span class="fu">}},[{</span><span class="ch">string</span><span class="fu">,</span><span class="dv">1</span><span class="fu">,</span><span class="st">&quot;ls&quot;</span><span class="fu">}]}.</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true"></a></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true"></a><span class="fu">{</span><span class="ch">ok</span><span class="fu">,</span> <span class="va">Tokens</span><span class="fu">,</span> <span class="va">_</span><span class="fu">}</span> <span class="op">=</span> <span class="fu">erl_scan:string(</span><span class="st">&quot;os:cmd(\&quot;ls\&quot;).&quot;</span><span class="fu">),</span> </span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true"></a><span class="fu">{</span><span class="ch">ok</span><span class="fu">,</span> <span class="va">Expressions</span><span class="fu">}</span> <span class="op">=</span> <span class="fu">erl_parse:parse_exprs(</span><span class="va">Tokens</span><span class="fu">).</span></span></code></pre></div>
+<h4 id="expr">expr</h4>
+<div class="sourceCode" id="cb9"><pre class="sourceCode erlang"><code class="sourceCode erlang"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true"></a><span class="fu">erl_eval:expr(</span><span class="va">Expression</span><span class="fu">,</span> <span class="fu">[]).</span></span></code></pre></div>
+<h4 id="exprs">exprs</h4>
+<div class="sourceCode" id="cb10"><pre class="sourceCode erlang"><code class="sourceCode erlang"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true"></a><span class="fu">erl_eval:exprs(</span><span class="va">Expressions</span><span class="fu">,</span> <span class="fu">[]).</span></span></code></pre></div>
+<h4 id="expr_list">expr_list</h4>
+<div class="sourceCode" id="cb11"><pre class="sourceCode erlang"><code class="sourceCode erlang"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true"></a><span class="fu">erl_eval:expr_list(</span><span class="va">Expressions</span><span class="fu">,</span> <span class="fu">[]).</span></span></code></pre></div>
+<div class="card">
+<div class="card-body">
+<p>Similar Elixir functions in the Code module are <code>:eval_string</code>, <code>:eval_file</code>, and <code>:eval_quoted</code>.</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode elixir"><code class="sourceCode elixir"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true"></a><span class="cn">Code</span><span class="op">.</span>eval_string(<span class="st">&quot;:os.cmd(:\&quot;cat /etc/passwd\&quot;)&quot;</span>, [])</span></code></pre></div>
+<p>There are also <code>:eval_string</code> and <code>:eval_file</code> in Embedded Elixir.</p>
+</div>
+</div>
+  </div>
+  
+</div>
+
+    </div>
+    <footer class="p-2 d-flex justify-content-between blog-footer font-weight-lighter border-top">
+      <p>Copyright © 2023 Alexey Pronin</p>
+      <p>Powered by <a href="https://jaspervdj.be/hakyll/">Hakyll</a>.</p>
+    </footer>
+  </div>
+  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
+</body>
+</html>

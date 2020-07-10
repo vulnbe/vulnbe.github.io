@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="author" content="Alexey Pronin">
+  
+  <link rel="canonical" href="../../post/xxe-in-erlang-and-elixir/" />
+  <meta name="theme-color" content="#563d7c">
+  
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+  <title>XML External Entity in Erlang and Elixir - vuln.be</title>
+  <link href="../../css/main.css" rel="stylesheet">
+  
+  <meta name="twitter:card" content="summary" />
+  <meta property="og:url" content="https://vuln.be/post/xxe-in-erlang-and-elixir/" />
+  <meta property="og:description" content="Some Erlang and Elixir XML libraries prevent XXE by default, and some allow embedding external entities, so it is necessary to make an effort to secure the application from potential vulnerabilities." />
+  <meta name="twitter:creator" content="@vulnbe" />
+  <meta property="og:title" content="XML External Entity in Erlang and Elixir" />
+  
+  
+  <link rel="alternate" type="application/atom+xml" href="../../atom.xml" title="vuln.be Atom Feed">
+  <link rel="alternate" type="application/rss+xml" href="../../rss.xml" title="vuln.be RSS Feed">
+</head>
+
+<body>
+  <div class="container">
+    <header class="blog-header py-3">
+      <div class="row flex-nowrap justify-content-between align-items-center">
+        <div class="col-12 text-center">
+          <a class="blog-header-logo text-dark" href="../../">VULN.BE</a>
+      </div>
+    </header>
+
+    <div class="nav-scroller py-1 mb-4 border-bottom">
+      <nav class="nav d-flex justify-content-between">
+        <a class="p-2 text-muted" href="../../">Home</a><a class="p-2 text-muted" href="../../tags/">Tags</a><a class="p-2 text-muted" href="../../archives/">Archives</a><a class="p-2 text-muted" href="../../page/contacts/">Contacts</a><a class="p-2 text-muted" href="../../page/about/">About</a>
+      </nav>
+    </div>
+    
+    <div class="blog-main px-2 my-4">
+      <div class="blog-post">
+  <div class="blog-post-meta font-weight-light">
+    <time datetime="2020-10-07" pubdate class="text-uppercase" data-updated="true"> 7 October 2020</time>
+    <div class="tags text-lowercase"><a href="../../tags/xxe/">xxe</a> | <a href="../../tags/injection/">injection</a> | <a href="../../tags/xml/">xml</a> | <a href="../../tags/parsers/">parsers</a> | <a href="../../tags/erlang/">erlang</a> | <a href="../../tags/elixir/">elixir</a></div>
+  </div>
+  <h1 class><a href="../../post/xxe-in-erlang-and-elixir/">XML External Entity in Erlang and Elixir</a></h1>
+  
+  <div class="mb-4 post-content">
+    <p>Processing XML documents requires taking into account the possibility of an XML eXternal Entity injection attack (XXE).</p>
+<p>The vulnerability arises when XML parser processes unverified data containing reference to an external entity.</p>
+<p>XXE belongs to category A4 in <a href="https://www.owasp.org/index.php/Category:OWASP_Top_Ten_Project">OWASP Top 10</a> list of vulnerabilities.</p>
+<p>In this publication, I will review how secure by default the popular XML parsers for Erlang and Elixir are.</p>
+<!--more-->
+<p>I list the parsers in descending order of their popularity and importance.</p>
+<h2 id="xmerl">xmerl</h2>
+<p>This parser is included in the Erlang Open Telecom Platform, and some XML libraries use it.</p>
+<p>The parser provides <code>xmerl_scan:file</code> and <code>xmerl_scan:string</code> functions.</p>
+<p>The following code outputs the contents of the file <code>/etc/passwd</code> using an injected external entity:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode erlang"><code class="sourceCode erlang"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true"></a><span class="fu">#</span><span class="op">!/</span><span class="ch">usr</span><span class="op">/</span><span class="ch">bin</span><span class="op">/</span><span class="ch">env</span> <span class="ch">escript</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true"></a><span class="co">%% -*- erlang -*-</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true"></a><span class="fu">main(</span>_<span class="fu">)</span> <span class="op">-&gt;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true"></a>  <span class="ch">try</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true"></a>    <span class="va">Xml</span> <span class="op">=</span> <span class="fu">xmerl_scan:string(</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true"></a>      <span class="st">&quot;&lt;?xml version=\&quot;1.0\&quot; encoding=\&quot;UTF-8\&quot;?&gt;&quot;</span> <span class="op">++</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true"></a>      <span class="st">&quot;&lt;!DOCTYPE foo [ &lt;!ELEMENT foo ANY &gt;&quot;</span> <span class="op">++</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true"></a>      <span class="st">&quot;&lt;!ENTITY xxe SYSTEM \&quot;file:///etc/passwd\&quot; &gt;]&gt;&quot;</span> <span class="op">++</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true"></a>      <span class="st">&quot;&lt;response&gt;&lt;result&gt;&amp;xxe;&lt;/result&gt;&lt;/response&gt;&quot;</span><span class="fu">),</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true"></a>    <span class="fu">io:format(</span><span class="st">&quot;~p&quot;</span><span class="fu">,</span> <span class="fu">[</span><span class="va">Xml</span><span class="fu">])</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true"></a>  <span class="kw">catch</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true"></a>    <span class="va">Excep</span><span class="fu">:</span><span class="va">Error</span><span class="fu">:</span><span class="va">St</span> <span class="op">-&gt;</span></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true"></a>      <span class="fu">io:format(</span><span class="st">&quot;~p: ~n ~p~n~p&quot;</span><span class="fu">,</span> <span class="fu">[</span><span class="va">Excep</span><span class="fu">,</span> <span class="va">Error</span><span class="fu">,</span> <span class="va">St</span><span class="fu">]),</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true"></a>      <span class="fu">halt(</span><span class="dv">1</span><span class="fu">)</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true"></a>  <span class="kw">end</span><span class="fu">.</span></span></code></pre></div>
+<h3 id="safe-xmerl"><a name="safe_xmerl"></a> Safe xmerl</h3>
+<p>To use the xmerl parser securely, you need to pass the callback function to fetch an external resource:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode erlang"><code class="sourceCode erlang"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true"></a><span class="fu">#</span><span class="op">!/</span><span class="ch">usr</span><span class="op">/</span><span class="ch">bin</span><span class="op">/</span><span class="ch">env</span> <span class="ch">escript</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true"></a><span class="co">%% -*- erlang -*-</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true"></a><span class="fu">main(</span>_<span class="fu">)</span> <span class="op">-&gt;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true"></a>  <span class="va">Trap</span> <span class="op">=</span> <span class="kw">fun</span><span class="fu">(</span>_<span class="fu">,</span> <span class="va">GlobalState</span><span class="fu">)</span> <span class="op">-&gt;</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true"></a>    <span class="fu">throw(</span><span class="ch">xxe_attack</span><span class="fu">),</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true"></a>    <span class="fu">{</span><span class="ch">ok</span><span class="fu">,</span> <span class="fu">{</span><span class="ch">string</span><span class="fu">,</span> <span class="st">&quot;not_fetched&quot;</span><span class="fu">},</span> <span class="va">GlobalState</span><span class="fu">}</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true"></a>  <span class="kw">end</span><span class="fu">,</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true"></a>  <span class="ch">try</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true"></a>    <span class="va">Xml</span> <span class="op">=</span> <span class="fu">xmerl_scan:string(</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true"></a>      <span class="st">&quot;&lt;?xml version=\&quot;1.0\&quot; encoding=\&quot;UTF-8\&quot;?&gt;&quot;</span> <span class="op">++</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true"></a>      <span class="st">&quot;&lt;!DOCTYPE foo [ &lt;!ELEMENT foo ANY &gt;&quot;</span> <span class="op">++</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true"></a>      <span class="st">&quot;&lt;!ENTITY xxe SYSTEM \&quot;file:///etc/passwd\&quot; &gt;]&gt;&quot;</span> <span class="op">++</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true"></a>      <span class="st">&quot;&lt;response&gt;&lt;result&gt;&amp;xxe;&lt;/result&gt;&lt;/response&gt;&quot;</span><span class="fu">,</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true"></a>      <span class="fu">[</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true"></a>        <span class="fu">{</span><span class="ch">fetch_fun</span><span class="fu">,</span> <span class="va">Trap</span><span class="fu">}</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true"></a>      <span class="fu">]),</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true"></a>    <span class="fu">io:format(</span><span class="st">&quot;~p&quot;</span><span class="fu">,</span> <span class="fu">[</span><span class="va">Xml</span><span class="fu">])</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true"></a>  <span class="kw">catch</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true"></a>    <span class="va">Excep</span><span class="fu">:</span><span class="va">Error</span><span class="fu">:</span><span class="va">St</span> <span class="op">-&gt;</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true"></a>      <span class="fu">io:format(</span><span class="st">&quot;~p: ~n ~p~n~p&quot;</span><span class="fu">,</span> <span class="fu">[</span><span class="va">Excep</span><span class="fu">,</span> <span class="va">Error</span><span class="fu">,</span> <span class="va">St</span><span class="fu">]),</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true"></a>      <span class="fu">halt(</span><span class="dv">1</span><span class="fu">)</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true"></a>  <span class="kw">end</span><span class="fu">.</span></span></code></pre></div>
+<p>You can also pass the <strong>acc_fun</strong> callback function to accumulate the contents of the entity. It will help to prevent DoS attacks using XML.</p>
+<h2 id="erlsom">Erlsom</h2>
+<p>Erlsom is an Erlang XML parsing library. This XML parser has different modes of use.</p>
+<h3 id="sax-mode">SAX mode</h3>
+<div class="sourceCode" id="cb3"><pre class="sourceCode erlang"><code class="sourceCode erlang"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true"></a><span class="kw">-module</span><span class="fu">(</span><span class="ch">erlsom_sax_test</span><span class="fu">).</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true"></a><span class="kw">-export</span><span class="fu">([</span><span class="ch">main</span><span class="op">/</span><span class="dv">0</span><span class="fu">]).</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true"></a><span class="fu">main()</span> <span class="op">-&gt;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true"></a>  <span class="va">Fun</span> <span class="op">=</span> <span class="kw">fun</span><span class="fu">(</span><span class="va">Event</span><span class="fu">,</span> <span class="va">Acc</span><span class="fu">)</span> <span class="op">-&gt;</span> <span class="fu">io:format(</span><span class="st">&quot;~p~n&quot;</span><span class="fu">,</span> <span class="fu">[</span><span class="va">Event</span><span class="fu">]),</span> <span class="va">Acc</span> <span class="kw">end</span><span class="fu">,</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true"></a>  <span class="va">Doc0</span> <span class="op">=</span> <span class="st">&quot;&lt;?xml version=\&quot;1.0\&quot; encoding=\&quot;UTF-8\&quot;?&gt;&quot;</span> <span class="op">++</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true"></a>         <span class="st">&quot;&lt;response&gt;&lt;result&gt;&lt;/result&gt;&lt;/response&gt;&quot;</span><span class="fu">,</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true"></a>  <span class="va">Doc1</span> <span class="op">=</span> <span class="st">&quot;&lt;?xml version=\&quot;1.0\&quot; encoding=\&quot;UTF-8\&quot;?&gt;&quot;</span> <span class="op">++</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true"></a>         <span class="st">&quot;&lt;!DOCTYPE foo [ &lt;!ELEMENT foo ANY &gt;&quot;</span> <span class="op">++</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true"></a>         <span class="st">&quot;&lt;!ENTITY xxe SYSTEM \&quot;file:///etc/passwd\&quot; &gt;]&gt;&quot;</span> <span class="op">++</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true"></a>         <span class="st">&quot;&lt;response&gt;&lt;result&gt;&amp;xxe;&lt;/result&gt;&lt;/response&gt;&quot;</span><span class="fu">,</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true"></a>  <span class="va">Xml0</span> <span class="op">=</span> <span class="fu">erlsom:parse_sax(</span><span class="va">Doc0</span><span class="fu">,</span> <span class="fu">[],</span> <span class="va">Fun</span><span class="fu">),</span></span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true"></a>  <span class="fu">io:format(</span><span class="st">&quot;~p&quot;</span><span class="fu">,</span> <span class="fu">[</span><span class="va">Xml0</span><span class="fu">]),</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true"></a>  <span class="va">Xml1</span> <span class="op">=</span> <span class="fu">erlsom:parse_sax(</span><span class="va">Doc1</span><span class="fu">,</span> <span class="fu">[],</span> <span class="va">Fun</span><span class="fu">),</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true"></a>  <span class="fu">io:format(</span><span class="st">&quot;~p&quot;</span><span class="fu">,</span> <span class="fu">[</span><span class="va">Xml1</span><span class="fu">]).</span></span></code></pre></div>
+<p>When running the example above, we will get an exception <code>{error, "Malformed: Illegal character in literal value"}</code> for Doc1. In this mode, the parser does not process external entities.</p>
+<h3 id="simple-dom-mode">Simple DOM mode</h3>
+<div class="sourceCode" id="cb4"><pre class="sourceCode erlang"><code class="sourceCode erlang"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true"></a><span class="kw">-module</span><span class="fu">(</span><span class="ch">erlsom_simple_test</span><span class="fu">).</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true"></a><span class="kw">-export</span><span class="fu">([</span><span class="ch">main</span><span class="op">/</span><span class="dv">0</span><span class="fu">]).</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true"></a><span class="fu">main()</span> <span class="op">-&gt;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true"></a>  <span class="va">Doc0</span> <span class="op">=</span> <span class="st">&quot;&lt;?xml version=\&quot;1.0\&quot; encoding=\&quot;UTF-8\&quot;?&gt;&quot;</span> <span class="op">++</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true"></a>         <span class="st">&quot;&lt;response&gt;&lt;result&gt;&lt;/result&gt;&lt;/response&gt;&quot;</span><span class="fu">,</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true"></a>  <span class="va">Doc1</span> <span class="op">=</span> <span class="st">&quot;&lt;?xml version=\&quot;1.0\&quot; encoding=\&quot;UTF-8\&quot;?&gt;&quot;</span> <span class="op">++</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true"></a>         <span class="st">&quot;&lt;!DOCTYPE foo [ &lt;!ELEMENT foo ANY &gt;&quot;</span> <span class="op">++</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true"></a>         <span class="st">&quot;&lt;!ENTITY xxe SYSTEM \&quot;file:///etc/passwd\&quot; &gt;]&gt;&quot;</span> <span class="op">++</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true"></a>         <span class="st">&quot;&lt;response&gt;&lt;result&gt;&amp;xxe;&lt;/result&gt;&lt;/response&gt;&quot;</span><span class="fu">,</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true"></a>  <span class="va">Xml0</span> <span class="op">=</span> <span class="fu">erlsom:simple_form(</span><span class="va">Doc0</span><span class="fu">),</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true"></a>  <span class="fu">io:format(</span><span class="st">&quot;~p\n&quot;</span><span class="fu">,</span> <span class="fu">[</span><span class="va">Xml0</span><span class="fu">]),</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true"></a>  <span class="va">Xml1</span> <span class="op">=</span> <span class="fu">erlsom:simple_form(</span><span class="va">Doc1</span><span class="fu">),</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true"></a>  <span class="fu">io:format(</span><span class="st">&quot;~p\n&quot;</span><span class="fu">,</span> <span class="fu">[</span><span class="va">Xml1</span><span class="fu">]).</span></span></code></pre></div>
+<p>In this mode, the injected external entity also triggers an exception <code>{error, "Malformed: Illegal character in literal value"}</code> for Doc1.</p>
+<h3 id="data-binder-mode">Data binder mode</h3>
+<p>In this mode, Erlsom parses the XML document and checks whether the XML document conforms to the Schema.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode erlang"><code class="sourceCode erlang"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true"></a><span class="kw">-module</span><span class="fu">(</span><span class="ch">erlsom_binder_test</span><span class="fu">).</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true"></a><span class="kw">-export</span><span class="fu">([</span><span class="ch">main</span><span class="op">/</span><span class="dv">0</span><span class="fu">]).</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true"></a><span class="fu">main()</span> <span class="op">-&gt;</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true"></a>  <span class="va">Schema</span> <span class="op">=</span> <span class="st">&quot;&lt;?xml version=\&quot;1.0\&quot; encoding=\&quot;UTF-8\&quot;?&gt;&quot;</span> <span class="op">++</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true"></a>           <span class="st">&quot;&lt;xsd:schema xmlns:xsd=\&quot;http://www.w3.org/2001/XMLSchema\&quot;&gt;&quot;</span> <span class="op">++</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true"></a>           <span class="st">&quot;&lt;xsd:element name=\&quot;response\&quot; type=\&quot;response_type\&quot;/&gt;&quot;</span> <span class="op">++</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true"></a>           <span class="st">&quot;&lt;xsd:complexType name=\&quot;response_type\&quot;&gt;&quot;</span> <span class="op">++</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true"></a>              <span class="st">&quot;&lt;xsd:sequence&gt;&quot;</span> <span class="op">++</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true"></a>                <span class="st">&quot;&lt;xsd:element name=\&quot;result\&quot; type=\&quot;xsd:string\&quot;&quot;</span> <span class="op">++</span></span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true"></a>                <span class="st">&quot;maxOccurs=\&quot;unbounded\&quot;/&gt;&quot;</span> <span class="op">++</span></span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true"></a>              <span class="st">&quot;&lt;/xsd:sequence&gt;&quot;</span> <span class="op">++</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true"></a>              <span class="st">&quot;&lt;/xsd:complexType&gt;&quot;</span> <span class="op">++</span></span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true"></a>          <span class="st">&quot;&lt;/xsd:schema&gt;&quot;</span><span class="fu">,</span></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true"></a>  <span class="fu">{</span><span class="ch">ok</span><span class="fu">,</span> <span class="va">Model</span><span class="fu">}</span> <span class="op">=</span> <span class="fu">erlsom:compile_xsd(</span><span class="va">Schema</span><span class="fu">),</span></span>
+<span id="cb5-16"><a href="#cb5-16" aria-hidden="true"></a>  <span class="va">Doc0</span> <span class="op">=</span> <span class="st">&quot;&lt;?xml version=\&quot;1.0\&quot; encoding=\&quot;UTF-8\&quot;?&gt;&quot;</span> <span class="op">++</span></span>
+<span id="cb5-17"><a href="#cb5-17" aria-hidden="true"></a>         <span class="st">&quot;&lt;response&gt;&lt;result&gt;abc&lt;/result&gt;&lt;/response&gt;&quot;</span><span class="fu">,</span></span>
+<span id="cb5-18"><a href="#cb5-18" aria-hidden="true"></a>  <span class="va">Xml0</span> <span class="op">=</span> <span class="fu">erlsom:scan(</span><span class="va">Doc0</span><span class="fu">,</span> <span class="va">Model</span><span class="fu">),</span></span>
+<span id="cb5-19"><a href="#cb5-19" aria-hidden="true"></a>  <span class="fu">io:format(</span><span class="st">&quot;~p\n&quot;</span><span class="fu">,</span> <span class="fu">[</span><span class="va">Xml0</span><span class="fu">]),</span></span>
+<span id="cb5-20"><a href="#cb5-20" aria-hidden="true"></a>  <span class="va">Doc1</span> <span class="op">=</span> <span class="st">&quot;&lt;?xml version=\&quot;1.0\&quot; encoding=\&quot;UTF-8\&quot;?&gt;&quot;</span> <span class="op">++</span></span>
+<span id="cb5-21"><a href="#cb5-21" aria-hidden="true"></a>         <span class="st">&quot;&lt;!DOCTYPE foo [ &lt;!ELEMENT foo ANY &gt;&quot;</span> <span class="op">++</span></span>
+<span id="cb5-22"><a href="#cb5-22" aria-hidden="true"></a>         <span class="st">&quot;&lt;!ENTITY xxe SYSTEM \&quot;file:///etc/passwd\&quot; &gt;]&gt;&quot;</span> <span class="op">++</span></span>
+<span id="cb5-23"><a href="#cb5-23" aria-hidden="true"></a>         <span class="st">&quot;&lt;response&gt;&lt;result&gt;&amp;xxe;&lt;/result&gt;&lt;/response&gt;&quot;</span><span class="fu">,</span></span>
+<span id="cb5-24"><a href="#cb5-24" aria-hidden="true"></a>  <span class="va">Xml1</span> <span class="op">=</span> <span class="fu">erlsom:scan(</span><span class="va">Doc1</span><span class="fu">,</span> <span class="va">Model</span><span class="fu">),</span></span>
+<span id="cb5-25"><a href="#cb5-25" aria-hidden="true"></a>  <span class="fu">io:format(</span><span class="st">&quot;~p\n&quot;</span><span class="fu">,</span> <span class="fu">[</span><span class="va">Xml1</span><span class="fu">]).</span></span></code></pre></div>
+<p>Here we also get an exception for the second document <code>{error, "Malformed: Illegal character in literal value"}</code>.</p>
+<h2 id="xmltomap">XmlToMap</h2>
+<p>This library allows us to create an Elixir map data structure from an XML string using <code>erlsom.simple_form</code>. Thus, here we are protected from XXE.</p>
+<h2 id="sweetxml">SweetXml</h2>
+<p>SweetXml is a wrapper around xmerl written in Elixir. It allows XXE injection as xmerl:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode elixir"><code class="sourceCode elixir"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true"></a><span class="kw">defmodule</span> <span class="cn">XXE</span> <span class="kw">do</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true"></a>  <span class="im">import</span> <span class="cn">SweetXml</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true"></a>  <span class="kw">def</span> test <span class="kw">do</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true"></a>    payload <span class="op">=</span> <span class="st">&quot;&quot;&quot;</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true"></a><span class="st">&lt;?xml version=&quot;1.0&quot; ?&gt;</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true"></a><span class="st">&lt;!DOCTYPE r [</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true"></a><span class="st">&lt;!ELEMENT r ANY &gt;</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true"></a><span class="st">&lt;!ENTITY sp SYSTEM &quot;file:///etc/passwd&quot;&gt;</span></span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true"></a><span class="st">]&gt;</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true"></a><span class="st">&lt;r&gt;&amp;sp;&lt;/r&gt;</span></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true"></a><span class="st">&quot;&quot;&quot;</span></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true"></a>    payload <span class="op">|&gt;</span> xpath(<span class="op">~</span>x<span class="st">&quot;//r/text()&quot;</span>e)</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true"></a>  <span class="kw">end</span></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true"></a><span class="kw">end</span></span></code></pre></div>
+<p>The library includes the <code>parse</code> and <code>stream</code> functions. It is possible to pass <a href="#safe_xmerl">xmerl options</a> to them. But there are also the popular <code>xpath</code> and <code>xmap</code> functions which cannot be used securely: <code>parent |&gt; parse |&gt; xpath(spec)</code>.</p>
+<h2 id="saxy">Saxy</h2>
+<p>Saxy does not support parsing DTD and XSD schemas. When encountering DTD, the parser skips that. Also, the parser does not expand external entity references but provides an option to specify how to handle them.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode elixir"><code class="sourceCode elixir"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true"></a><span class="im">import</span> <span class="cn">Saxy</span><span class="op">.</span><span class="cn">XML</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true"></a>doc1 <span class="op">=</span> <span class="st">&quot;&quot;&quot;</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true"></a><span class="st">&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true"></a><span class="st">&lt;!DOCTYPE foo [ &lt;!ELEMENT foo ANY &gt;&lt;!ENTITY xxe SYSTEM &quot;file:///etc/passwd&quot; &gt;]&gt;</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true"></a><span class="st">&lt;response&gt;&lt;result&gt;&amp;xxe;&lt;/result&gt;&lt;/response&gt;</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true"></a><span class="st">&quot;&quot;&quot;</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true"></a><span class="cn">Saxy</span><span class="op">.</span><span class="cn">SimpleForm</span><span class="op">.</span>parse_string(doc1)</span></code></pre></div>
+<p>The code above parses a document to such an object:</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode elixir"><code class="sourceCode elixir"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true"></a>{<span class="va">:ok</span>, {<span class="st">&quot;response&quot;</span>, [], [{<span class="st">&quot;result&quot;</span>, [], [<span class="st">&quot;&amp;xxe;&quot;</span>]}]}}</span></code></pre></div>
+<h2 id="quinn">Quinn</h2>
+<p>A simple XML parser in Elixir using <code>xmerl_scan.string</code> to parse the XML.</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode elixir"><code class="sourceCode elixir"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true"></a><span class="im">import</span> <span class="cn">Elixir</span><span class="op">.</span><span class="cn">Quinn</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true"></a>doc1 <span class="op">=</span> <span class="st">&quot;&quot;&quot;</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true"></a><span class="st">&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true"></a><span class="st">&lt;!DOCTYPE foo [ &lt;!ELEMENT foo ANY &gt;&lt;!ENTITY xxe SYSTEM &quot;file:///etc/passwd&quot; &gt;]&gt;</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true"></a><span class="st">&lt;response&gt;&lt;result&gt;&amp;xxe;&lt;/result&gt;&lt;/response&gt;</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true"></a><span class="st">&quot;&quot;&quot;</span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true"></a><span class="cn">Quinn</span><span class="op">.</span>parse(doc1)</span></code></pre></div>
+<p>As expected, we get the contents of <code>/etc/passwd</code>. There are no functions in this library that will prevent XXE.</p>
+<h2 id="fast_xml">fast_xml</h2>
+<p>fast_xml is Expat based Erlang XML parsing and manipulation library, with a focus on XML stream parsing.</p>
+<p>Let’s assemble the library and launch the interactive shell <code>erl -pa ebin -pa deps/*/ebin</code> and try to parse a full structure:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode erlang"><code class="sourceCode erlang"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true"></a><span class="va">Doc</span> <span class="op">=</span> <span class="op">&lt;&lt;</span><span class="st">&quot;&lt;?xml version=\&quot;1.0\&quot; encoding=\&quot;UTF-8\&quot;?&gt;&quot;</span><span class="fu">,</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true"></a>        <span class="st">&quot;&lt;!DOCTYPE foo [ &lt;!ELEMENT foo ANY &gt;&lt;!ENTITY xxe SYSTEM \&quot;file:///etc/passwd\&quot; &gt;]&gt;&quot;</span><span class="fu">,</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true"></a>        <span class="st">&quot;&lt;response&gt;&lt;result&gt;&amp;xxe;&lt;/result&gt;&lt;/response&gt;&quot;</span><span class="op">&gt;&gt;</span><span class="fu">.</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true"></a><span class="fu">fxml:load_nif().</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true"></a><span class="fu">fxml_stream:parse_element(</span><span class="va">Doc</span><span class="fu">).</span></span></code></pre></div>
+<p>We will get an error <code>parsing aborted</code> as for the streaming parser.</p>
+<h2 id="xmlrpc">XmlRpc</h2>
+<p>The library uses <code>erlsom.scan</code> under the hood, so the external entities are not resolved.</p>
+<h2 id="meeseeks">Meeseeks</h2>
+<p>Meeseeks is an Elixir library for parsing and extracting data from HTML and XML with CSS or XPath selectors built on top of the html5ever Rust library.</p>
+<p>The library is a simple parser. External entities are not allowed as well as references.</p>
+<p>You can parse the document using <code>Meeseeks.parse(text, :xml)</code> or <code>Meeseeks.parse(text)</code>. They have different behaviors, but both are safe (thanks to <span class="citation" data-cites="mischov">[@mischov]</span>(https://twitter.com/mischov) for comments).</p>
+<p>Querying parsed document with <code>Meeseeks.one(parsed, xpath("//*/*"))</code> will produce:</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode elixir"><code class="sourceCode elixir"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true"></a><span class="co">#Meeseeks.Result&lt;{ &lt;response&gt;&lt;result&gt;&amp;amp;xxe;&lt;/result&gt;&lt;/response&gt; }&gt;</span></span></code></pre></div>
+<h2 id="exml">Exml</h2>
+<p>The library is based on <code>xmerl_scan.string</code> and is also not secure by default.</p>
+<h2 id="exoml">Exoml</h2>
+<p>This library converts XML documents into a tree structure. External entities are not allowed.</p>
+<p><code>Exoml.decode(payload)</code>:</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode elixir"><code class="sourceCode elixir"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true"></a>{<span class="va">:root</span>, [],</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true"></a> [</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true"></a>   {<span class="va">:prolog</span>, [{<span class="st">&quot;version&quot;</span>, <span class="st">&quot;1.0&quot;</span>}, {<span class="st">&quot;encoding&quot;</span>, <span class="st">&quot;UTF-8&quot;</span>}], <span class="cn">nil</span>},</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true"></a>   {<span class="va">:doctype</span>, [<span class="st">&quot; foo [ &lt;!ELEMENT foo ANY &quot;</span>], <span class="cn">nil</span>},</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true"></a>   <span class="st">&quot;&lt;!ENTITY xxe SYSTEM \&quot;file:///etc/passwd\&quot; &gt;]&gt;\n&quot;</span>,</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true"></a>   {<span class="st">&quot;response&quot;</span>, [], [{<span class="st">&quot;result&quot;</span>, [], [<span class="st">&quot;xxe&quot;</span>]}]},</span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true"></a>   <span class="st">&quot;\n&quot;</span></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true"></a> ]}</span></code></pre></div>
+<h2 id="summary">Summary</h2>
+<h3 id="secure-parsers">Secure parsers</h3>
+<ul>
+<li>Erlsom</li>
+<li>XmlToMap</li>
+<li>Saxy</li>
+<li>fast_xml</li>
+<li>XmlRpc</li>
+<li>Meeseeks</li>
+<li>Exoml</li>
+</ul>
+<h3 id="insecure-by-default-parsers">Insecure by default parsers</h3>
+<ul>
+<li>xmerl</li>
+<li>sweetxml</li>
+<li>Quinn</li>
+<li>Exml</li>
+</ul>
+<h2 id="references">References</h2>
+<ul>
+<li><a href="https://www.owasp.org/index.php/Top_10-2017_A4-XML_External_Entities_(XXE)">OWASP Top 10-2017 A4: XML External Entities (XXE)</a></li>
+<li><a href="https://www.owasp.org/index.php/Testing_for_XML_Injection_(OTG-INPVAL-008)">Testing for XML Injection (OTG-INPVAL-008)</a></li>
+<li><a href="https://erlang.org/doc/man/xmerl_scan.html">xmerl</a></li>
+<li><a href="https://github.com/willemdj/erlsom">Erlsom</a></li>
+<li><a href="https://github.com/homanchou/elixir-xml-to-map">XmlToMap</a></li>
+<li><a href="https://github.com/kbrw/sweet_xml">SweetXml</a></li>
+<li><a href="https://github.com/qcam/saxy">Saxy</a></li>
+<li><a href="https://github.com/nhu313/Quinn">Quinn</a></li>
+<li><a href="https://github.com/processone/fast_xml">fast_xml</a></li>
+<li><a href="https://github.com/ewildgoose/elixir-xml_rpc">XmlRpc</a></li>
+<li><a href="https://github.com/mischov/meeseeks">Meeseeks</a></li>
+<li><a href="https://github.com/expelledboy/exml">Exml</a></li>
+<li><a href="https://github.com/Overbryd/exoml">Exoml</a></li>
+</ul>
+  </div>
+  
+</div>
+
+    </div>
+    <footer class="p-2 d-flex justify-content-between blog-footer font-weight-lighter border-top">
+      <p>Copyright © 2023 Alexey Pronin</p>
+      <p>Powered by <a href="https://jaspervdj.be/hakyll/">Hakyll</a>.</p>
+    </footer>
+  </div>
+  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
+</body>
+</html>

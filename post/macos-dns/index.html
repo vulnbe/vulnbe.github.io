@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="author" content="Alexey Pronin">
+  
+  <link rel="canonical" href="../../post/macos-dns/" />
+  <meta name="theme-color" content="#563d7c">
+  
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+  <title>MacOS local DNS - vuln.be</title>
+  <link href="../../css/main.css" rel="stylesheet">
+  
+  <link rel="alternate" type="application/atom+xml" href="../../atom.xml" title="vuln.be Atom Feed">
+  <link rel="alternate" type="application/rss+xml" href="../../rss.xml" title="vuln.be RSS Feed">
+</head>
+
+<body>
+  <div class="container">
+    <header class="blog-header py-3">
+      <div class="row flex-nowrap justify-content-between align-items-center">
+        <div class="col-12 text-center">
+          <a class="blog-header-logo text-dark" href="../../">VULN.BE</a>
+      </div>
+    </header>
+
+    <div class="nav-scroller py-1 mb-4 border-bottom">
+      <nav class="nav d-flex justify-content-between">
+        <a class="p-2 text-muted" href="../../">Home</a><a class="p-2 text-muted" href="../../tags/">Tags</a><a class="p-2 text-muted" href="../../archives/">Archives</a><a class="p-2 text-muted" href="../../page/contacts/">Contacts</a><a class="p-2 text-muted" href="../../page/about/">About</a>
+      </nav>
+    </div>
+    
+    <div class="blog-main px-2 my-4">
+      <div class="blog-post">
+  <div class="blog-post-meta font-weight-light">
+    <time datetime="2018-09-04" pubdate class="text-uppercase" data-updated="true"> 4 September 2018</time>
+    <div class="tags text-lowercase"><a href="../../tags/macOS/">macOS</a> | <a href="../../tags/osx/">osx</a> | <a href="../../tags/dns/">dns</a> | <a href="../../tags/dnsmasq/">dnsmasq</a></div>
+  </div>
+  <h1 class><a href="../../post/macos-dns/">MacOS local DNS</a></h1>
+  
+  <div class="mb-4 post-content">
+    <p>Sometimes you need to use DNS on non-standard port. MacOS does not allow that. The following recipe helps to overcome this restriction.</p>
+<!--more-->
+<p>First, install dnsmasq:</p>
+<pre><code>brew install dnsmasq</code></pre>
+<p>Second, edit <em>/usr/local/etc/dnsmasq.conf</em>:</p>
+<pre class="conf"><code>port=53
+bogus-priv
+resolv-file=/usr/local/etc/resolv.conf
+no-poll
+server=/service.consul/2a04:AAAA:AAAA::BBBB:1#8600
+listen-address=127.0.0.1</code></pre>
+<p>In the example above, I configure the search domain <em>service.consul</em> to be resolved via <a href="https://www.consul.io/">Consul</a> at IPv6 address <em>2a04:AAAA:AAAA::BBBB:1</em> and port <em>8600</em>.</p>
+<p>Third, place your name servers in <em>/usr/local/etc/resolv.conf</em>:</p>
+<pre class="conf"><code>nameserver 2a04:AAAA:AAAA::2
+nameserver 8.8.8.8
+nameserver 8.8.4.4</code></pre>
+<p>Fourth, start the service:</p>
+<pre><code>sudo brew services start dnsmasq</code></pre>
+<p>This command will create a service file <em>/Library/LaunchDaemons/homebrew.mxcl.dnsmasq.plist</em> and run it.</p>
+<p>Finally, add <em>localhost</em> as name server in the network settings:</p>
+<figure>
+<img src="../../images/macos-dns-preferences.png" alt="macOS DNS preferences" /><figcaption aria-hidden="true">macOS DNS preferences</figcaption>
+</figure>
+  </div>
+  
+</div>
+
+    </div>
+    <footer class="p-2 d-flex justify-content-between blog-footer font-weight-lighter border-top">
+      <p>Copyright © 2023 Alexey Pronin</p>
+      <p>Powered by <a href="https://jaspervdj.be/hakyll/">Hakyll</a>.</p>
+    </footer>
+  </div>
+  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
+</body>
+</html>

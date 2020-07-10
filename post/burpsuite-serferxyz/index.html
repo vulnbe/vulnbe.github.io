@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="author" content="Alexey Pronin">
+  
+  <link rel="canonical" href="../../post/burpsuite-serferxyz/" />
+  <meta name="theme-color" content="#563d7c">
+  
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+  <title>Burp Suite Pro 1.7.31 Loader & Keygen reverse engineering - vuln.be</title>
+  <link href="../../css/main.css" rel="stylesheet">
+  
+  <link rel="alternate" type="application/atom+xml" href="../../atom.xml" title="vuln.be Atom Feed">
+  <link rel="alternate" type="application/rss+xml" href="../../rss.xml" title="vuln.be RSS Feed">
+</head>
+
+<body>
+  <div class="container">
+    <header class="blog-header py-3">
+      <div class="row flex-nowrap justify-content-between align-items-center">
+        <div class="col-12 text-center">
+          <a class="blog-header-logo text-dark" href="../../">VULN.BE</a>
+      </div>
+    </header>
+
+    <div class="nav-scroller py-1 mb-4 border-bottom">
+      <nav class="nav d-flex justify-content-between">
+        <a class="p-2 text-muted" href="../../">Home</a><a class="p-2 text-muted" href="../../tags/">Tags</a><a class="p-2 text-muted" href="../../archives/">Archives</a><a class="p-2 text-muted" href="../../page/contacts/">Contacts</a><a class="p-2 text-muted" href="../../page/about/">About</a>
+      </nav>
+    </div>
+    
+    <div class="blog-main px-2 my-4">
+      <div class="blog-post">
+  <div class="blog-post-meta font-weight-light">
+    <time datetime="2018-07-12" pubdate class="text-uppercase" data-updated="true">12 July 2018</time>
+    <div class="tags text-lowercase"><a href="../../tags/burp/">burp</a> | <a href="../../tags/burp suite/">burp suite</a> | <a href="../../tags/loader/">loader</a> | <a href="../../tags/keygen/">keygen</a> | <a href="../../tags/re/">re</a> | <a href="../../tags/reverse engineering/">reverse engineering</a> | <a href="../../tags/java/">java</a> | <a href="../../tags/cfp/">cfp</a></div>
+  </div>
+  <h1 class><a href="../../post/burpsuite-serferxyz/">Burp Suite Pro 1.7.31 Loader & Keygen reverse engineering</a></h1>
+  
+  <div class="mb-4 post-content">
+    <p>One sleepless night I decided to investigate how Burp Suite Pro 1.7.31 Loader &amp; Keygen written by surferxyz works.</p>
+<!--more-->
+<p>By feeding the jar to the <a href="http://www.benf.org/other/cfr/">cfp</a> I got the nice prompt:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true"></a><span class="kw">package</span><span class="im"> enjoy.reversing.me;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true"></a>...</span></code></pre></div>
+<p>Are you intrigued?</p>
+<p>So was I. But the author did not leave any obstacles to the analysis. The code is very straightforward, which makes this article short.</p>
+<p>The loader uses the <code>-Xbootclasspath/p</code> option to override a class in the standard API. Specifically, it changes the logic of the comparison of BigIntegers. It looks like this:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true"></a><span class="kw">public</span> <span class="dt">int</span> <span class="fu">compareTo</span>(<span class="bu">BigInteger</span> bigInteger) {</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true"></a>        <span class="kw">if</span> (bigInteger.<span class="fu">toString</span>().<span class="fu">equals</span>(<span class="st">&quot;41887057529670892417099675184988823562189446071931346590373401386382187010757776789530261107642241481765573564399372026635531434277689713893077238342140188697599815518285985173986994924529248330562438026019370691558401708440269202550454278192107132107963242024598323484846578375305324833393290098477915413311&quot;</span>)) {</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true"></a>            <span class="kw">return</span> <span class="dv">0</span>;</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true"></a>        }</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true"></a>        <span class="kw">if</span> (bigInteger.<span class="fu">toString</span>().<span class="fu">startsWith</span>(<span class="st">&quot;21397203472253099933519641255954336811825897689871318536&quot;</span>)) {</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true"></a>            <span class="kw">return</span> <span class="dv">0</span>;</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true"></a>        }</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true"></a>        ...</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true"></a>}</span></code></pre></div>
+<p>The <code>-Xbootclasspath/p</code> option doesn’t work in Java 9+, so if you want to experiment with it, you can patch <code>java.base/java/math/BigInteger.java</code> and build a custom JDK.</p>
+  </div>
+  
+</div>
+
+    </div>
+    <footer class="p-2 d-flex justify-content-between blog-footer font-weight-lighter border-top">
+      <p>Copyright © 2023 Alexey Pronin</p>
+      <p>Powered by <a href="https://jaspervdj.be/hakyll/">Hakyll</a>.</p>
+    </footer>
+  </div>
+  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
+</body>
+</html>
