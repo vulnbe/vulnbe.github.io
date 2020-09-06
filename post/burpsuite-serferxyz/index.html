@@ -42,20 +42,20 @@
     <p>One sleepless night I decided to inspect how Burp Suite Pro 1.7.31 Loader &amp; Keygen written by surferxyz works.</p>
 <!--more-->
 <p>By feeding the jar to the <a href="http://www.benf.org/other/cfr/">cfp</a> i got some code.</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb1-1"><a href="#cb1-1"></a><span class="kw">package</span><span class="im"> enjoy.reversing.me;</span></span>
-<span id="cb1-2"><a href="#cb1-2"></a>...</span></code></pre></div>
+<div class="sourceCode" id="cb1"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true"></a><span class="kw">package</span><span class="im"> enjoy.reversing.me;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true"></a>...</span></code></pre></div>
 <p>Are you intrigued?</p>
 <p>I was. But the author did not leave any obstacles to the analysis. Therefore, a few more lines and you can diverge.</p>
 <p>The loader uses the known option (-Xbootclasspath/p) to override a class in the standard API. Specifically, it changes the logic of comparing BigIntegers. It looks like this:</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb2-1"><a href="#cb2-1"></a><span class="kw">public</span> <span class="dt">int</span> <span class="fu">compareTo</span>(<span class="bu">BigInteger</span> bigInteger) {</span>
-<span id="cb2-2"><a href="#cb2-2"></a>        <span class="kw">if</span> (bigInteger.<span class="fu">toString</span>().<span class="fu">equals</span>(<span class="st">&quot;41887057529670892417099675184988823562189446071931346590373401386382187010757776789530261107642241481765573564399372026635531434277689713893077238342140188697599815518285985173986994924529248330562438026019370691558401708440269202550454278192107132107963242024598323484846578375305324833393290098477915413311&quot;</span>)) {</span>
-<span id="cb2-3"><a href="#cb2-3"></a>            <span class="kw">return</span> <span class="dv">0</span>;</span>
-<span id="cb2-4"><a href="#cb2-4"></a>        }</span>
-<span id="cb2-5"><a href="#cb2-5"></a>        <span class="kw">if</span> (bigInteger.<span class="fu">toString</span>().<span class="fu">startsWith</span>(<span class="st">&quot;21397203472253099933519641255954336811825897689871318536&quot;</span>)) {</span>
-<span id="cb2-6"><a href="#cb2-6"></a>            <span class="kw">return</span> <span class="dv">0</span>;</span>
-<span id="cb2-7"><a href="#cb2-7"></a>        }</span>
-<span id="cb2-8"><a href="#cb2-8"></a>        ...</span>
-<span id="cb2-9"><a href="#cb2-9"></a>}</span></code></pre></div>
+<div class="sourceCode" id="cb2"><pre class="sourceCode java"><code class="sourceCode java"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true"></a><span class="kw">public</span> <span class="dt">int</span> <span class="fu">compareTo</span>(<span class="bu">BigInteger</span> bigInteger) {</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true"></a>        <span class="kw">if</span> (bigInteger.<span class="fu">toString</span>().<span class="fu">equals</span>(<span class="st">&quot;41887057529670892417099675184988823562189446071931346590373401386382187010757776789530261107642241481765573564399372026635531434277689713893077238342140188697599815518285985173986994924529248330562438026019370691558401708440269202550454278192107132107963242024598323484846578375305324833393290098477915413311&quot;</span>)) {</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true"></a>            <span class="kw">return</span> <span class="dv">0</span>;</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true"></a>        }</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true"></a>        <span class="kw">if</span> (bigInteger.<span class="fu">toString</span>().<span class="fu">startsWith</span>(<span class="st">&quot;21397203472253099933519641255954336811825897689871318536&quot;</span>)) {</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true"></a>            <span class="kw">return</span> <span class="dv">0</span>;</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true"></a>        }</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true"></a>        ...</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true"></a>}</span></code></pre></div>
 <p>‘-Xbootclasspath/p’ option will not work in Java 9+, but it is possible to patch java.base/java/math/BigInteger.java and build custom JDK. This means that the Loader is no longer needed.</p>
   </div>
   
