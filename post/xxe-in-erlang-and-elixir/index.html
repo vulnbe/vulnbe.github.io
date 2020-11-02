@@ -214,7 +214,8 @@
 <h2 id="meeseeks">Meeseeks</h2>
 <p>Meeseeks is an Elixir library for parsing and extracting data from HTML and XML with CSS or XPath selectors built on top of the html5ever Rust library.</p>
 <p>The library is a simple parser. External entities are not allowed as well as references.</p>
-<p>Parsing the document with <code>Meeseeks.parse</code> and querying with <code>Meeseeks.one(parsed, xpath("//*/*"))</code> produces:</p>
+<p>You can parse the document using <code>Meeseeks.parse(text, :xml)</code> or <code>Meeseeks.parse(text)</code>. They have different behaviors, but both are safe (thanks to <span class="citation" data-cites="mischov">[@mischov]</span>(https://twitter.com/mischov) for comments).</p>
+<p>Querying parsed document with <code>Meeseeks.one(parsed, xpath("//*/*"))</code> will produce:</p>
 <div class="sourceCode" id="cb11"><pre class="sourceCode elixir"><code class="sourceCode elixir"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true"></a><span class="co">#Meeseeks.Result&lt;{ &lt;response&gt;&lt;result&gt;&amp;amp;xxe;&lt;/result&gt;&lt;/response&gt; }&gt;</span></span></code></pre></div>
 <h2 id="exml">Exml</h2>
 <p>The library is based on <code>xmerl_scan.string</code> and is also not secure by default.</p>
