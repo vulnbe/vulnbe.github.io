@@ -48,7 +48,7 @@
     <id>https://vuln.be/post/rebar3-command-injection/</id>
     <published>2020-09-01T00:00:00Z</published>
     <updated>2020-09-01T00:00:00Z</updated>
-    <summary type="html"><![CDATA[<p>Rebar3 is a tool widely used for building applications in the Erlang world. It is quite dangerous. With the tool, you can get OS command execution in different ways and sometimes in ways not intended by developers.</p>
+    <summary type="html"><![CDATA[<p>Rebar3 is a widely used tool for building applications in the Erlang world. It is quite dangerous though. With the tool, you can get OS command execution in different ways and sometimes in ways not intended by developers.</p>
 ]]></summary>
 </entry>
 <entry>
@@ -76,7 +76,7 @@
     <id>https://vuln.be/post/orion-bolid/</id>
     <published>2018-09-06T00:00:00Z</published>
     <updated>2018-09-06T00:00:00Z</updated>
-    <summary type="html"><![CDATA[<p>Once during a pentest on one of the hosts on WI-FI network I discovered a lot of open ports (XML-RPC).</p>
+    <summary type="html"><![CDATA[<p>Once whule pentesting a WI-FI network I discovered a lot of open ports (XML-RPC) on one of the hosts.</p>
 ]]></summary>
 </entry>
 <entry>

@@ -42,10 +42,10 @@
   <h1 class><a href="../../post/unlock-luks-on-boot/">Auto unlocking encrypted root volumes</a></h1>
   
   <div class="mb-4 post-content">
-    <p>Sometimes it is necessary that the system disk is encrypted and the system is loaded automatically. In this short outline i will focus on how to make it work.</p>
+    <p>Sometimes it is necessary that the system disk is encrypted and the system is loaded automatically. In this short outline I will focus on how to make it work.</p>
 <!--more-->
-<p>I will use the key file on the USB storage device. You must consider the risks of using such configuration.</p>
-<p>Create key:</p>
+<p>I will use the key file on the USB storage device. You must consider the risks of using such a configuration.</p>
+<p>Create a key:</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true"></a><span class="fu">dd</span> if=/dev/random of=secretkey bs=1 count=4096</span></code></pre></div>
 <p>Add the key to your LUKS volume:</p>
 <div class="sourceCode" id="cb2"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true"></a><span class="ex">cryptsetup</span> luksAddKey /dev/your_luks_dev secretkey</span></code></pre></div>
@@ -53,21 +53,20 @@
 <div class="sourceCode" id="cb3"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true"></a><span class="fu">mount</span> /dev/disk/by-label/USBCRYPT /mnt</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true"></a><span class="fu">cp</span> secretkey /mnt/</span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true"></a><span class="fu">umount</span> /mnt</span></code></pre></div>
-<p>Edit volume record in /etc/crypttab:</p>
+<p>Edit volume the record in /etc/crypttab:</p>
 <p><em>Before:</em></p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true"></a><span class="ex">root_volume_crypt</span> UUID=714e7ed2-af19-4214-8981-34ba71652bf7 none luks</span></code></pre></div>
 <p><em>After:</em></p>
 <div class="sourceCode" id="cb5"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true"></a><span class="ex">root_volume_crypt</span> UUID=714e7ed2-af19-4214-8981-34ba71652bf7 /dev/disk/by-label/USBCRYPT:/secretkey luks,keyscript=/lib/cryptsetup/scripts/passdev</span></code></pre></div>
 <p>Check whether the file /lib/cryptsetup/scripts/passdev exists in your setup.</p>
-<p>If you have other partitions that you want to mount after boot, the records for them will look like this:</p>
+<p>If you have other partitions that you want to mount after boot, the records for them might look like this:</p>
 <div class="sourceCode" id="cb6"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true"></a><span class="ex">another_volume_crypt</span> UUID=11f68a35-9fac-4f2b-81d2-593f739c8273 /path/to/anothersecretkey luks</span></code></pre></div>
-<p>Do not forget to configure mounts in /etc/fstab:</p>
+<p>Don’t forget to configure mounts in /etc/fstab:</p>
 <div class="sourceCode" id="cb7"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true"></a><span class="ex">/dev/mapper/root_volume_crypt</span> / ext4 errors=remount-ro,nodelalloc,data=ordered 0 1</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true"></a><span class="ex">/dev/mapper/another_volume_crypt</span> /your/mountpoint ext4 defaults,nodelalloc,data=ordered,user,users,nodev 0 2</span></code></pre></div>
-<p>After that I got some problems using this configuration because of one volume was mounted by passdev script and the others by systemd.</p>
-<p>Systemd waited for the already mounted drive 90 seconds during boot. This timer could not be disabled because the systemd automatically generated the service from the template using systemd-cryptsetup-generator.</p>
-<p>I did not find any simple and beautiful way to solve it and I had to make a patch.</p>
-<p>This is it:</p>
+<p>After that I got some problems using this configuration, because one volume was mounted by passdev script and the others by systemd.</p>
+<p>Systemd waited for the already mounted drive 90 seconds during boot. This timer could not be disabled, because the systemd automatically generates the service from the template using systemd-cryptsetup-generator.</p>
+<p>I did not find any simple way to solve that and had to make a patch:</p>
 <div class="sourceCode" id="cb8"><pre class="sourceCode diff"><code class="sourceCode diff"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true"></a><span class="kw">diff --git a/src/cryptsetup/cryptsetup-generator.c b/src/cryptsetup/cryptsetup-generator.c</span></span>
 <span id="cb8-2"><a href="#cb8-2" aria-hidden="true"></a>index 2d00bcf..0ca9c4b 100644</span>
 <span id="cb8-3"><a href="#cb8-3" aria-hidden="true"></a><span class="dt">--- a/src/cryptsetup/cryptsetup-generator.c</span></span>
@@ -77,13 +76,13 @@
 <span id="cb8-7"><a href="#cb8-7" aria-hidden="true"></a>                 crypto_device *d = NULL;</span>
 <span id="cb8-8"><a href="#cb8-8" aria-hidden="true"></a>                 _cleanup_free_ char *name = NULL, *device = NULL, *keyfile = NULL, *options = NULL;</span>
 <span id="cb8-9"><a href="#cb8-9" aria-hidden="true"></a><span class="va">+                bool keyscript;</span></span>
-<span id="cb8-10"><a href="#cb8-10" aria-hidden="true"></a> </span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true"></a></span>
 <span id="cb8-11"><a href="#cb8-11" aria-hidden="true"></a>                 if (!fgets(line, sizeof(line), f))</span>
 <span id="cb8-12"><a href="#cb8-12" aria-hidden="true"></a>                         break;</span>
 <span id="cb8-13"><a href="#cb8-13" aria-hidden="true"></a><span class="dt">@@ -413,6 +414,12 @@ static int add_crypttab_devices(void) {</span></span>
 <span id="cb8-14"><a href="#cb8-14" aria-hidden="true"></a>                         continue;</span>
 <span id="cb8-15"><a href="#cb8-15" aria-hidden="true"></a>                 }</span>
-<span id="cb8-16"><a href="#cb8-16" aria-hidden="true"></a> </span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true"></a></span>
 <span id="cb8-17"><a href="#cb8-17" aria-hidden="true"></a><span class="va">+                keyscript = fstab_test_option(options, &quot;keyscript\0&quot;);</span></span>
 <span id="cb8-18"><a href="#cb8-18" aria-hidden="true"></a><span class="va">+                if (keyscript) {</span></span>
 <span id="cb8-19"><a href="#cb8-19" aria-hidden="true"></a><span class="va">+                        log_info(&quot;Not creating device '%s' because it has keyscript option.&quot;, name);</span></span>
@@ -93,7 +92,7 @@
 <span id="cb8-23"><a href="#cb8-23" aria-hidden="true"></a>                 r = create_disk(name, device, keyfile, (d &amp;&amp; d-&gt;options) ? d-&gt;options : options);</span>
 <span id="cb8-24"><a href="#cb8-24" aria-hidden="true"></a>                 if (r &lt; 0)</span>
 <span id="cb8-25"><a href="#cb8-25" aria-hidden="true"></a>                         return r;</span></code></pre></div>
-<p>I used Docker for compiling and building systemd debian package.</p>
+<p>I used Docker for compiling and building that systemd debian package to keep the system clean.</p>
 <p><em>Dockerfile</em>:</p>
 <div class="sourceCode" id="cb9"><pre class="sourceCode dockerfile"><code class="sourceCode dockerfile"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true"></a><span class="kw">FROM</span> debian:9</span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true"></a></span>
@@ -126,7 +125,7 @@
 
     </div>
     <footer class="p-2 d-flex justify-content-between blog-footer font-weight-lighter border-top">
-      <p>Copyright © 2023 Alexey Pronin</p>
+      <p>Copyright © 2016 -  2023 Alexey Pronin</p>
       <p>Powered by <a href="https://jaspervdj.be/hakyll/">Hakyll</a>.</p>
     </footer>
   </div>

@@ -44,7 +44,7 @@
 <item>
     <title>OS command injection in Rebar3</title>
     <link>https://vuln.be/post/rebar3-command-injection/</link>
-    <description><![CDATA[<p>Rebar3 is a tool widely used for building applications in the Erlang world. It is quite dangerous. With the tool, you can get OS command execution in different ways and sometimes in ways not intended by developers.</p>
+    <description><![CDATA[<p>Rebar3 is a widely used tool for building applications in the Erlang world. It is quite dangerous though. With the tool, you can get OS command execution in different ways and sometimes in ways not intended by developers.</p>
 ]]></description>
     <pubDate>Tue, 01 Sep 2020 00:00:00 UT</pubDate>
     <guid>https://vuln.be/post/rebar3-command-injection/</guid>
@@ -72,7 +72,7 @@
 <item>
     <title>Short story about «Orion Pro»: access control system without access control</title>
     <link>https://vuln.be/post/orion-bolid/</link>
-    <description><![CDATA[<p>Once during a pentest on one of the hosts on WI-FI network I discovered a lot of open ports (XML-RPC).</p>
+    <description><![CDATA[<p>Once whule pentesting a WI-FI network I discovered a lot of open ports (XML-RPC) on one of the hosts.</p>
 ]]></description>
     <pubDate>Thu, 06 Sep 2018 00:00:00 UT</pubDate>
     <guid>https://vuln.be/post/orion-bolid/</guid>

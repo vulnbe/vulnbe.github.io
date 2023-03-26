@@ -42,15 +42,15 @@
   <h1 class><a href="../../post/orion-bolid/">Short story about «Orion Pro»: access control system without access control</a></h1>
   
   <div class="mb-4 post-content">
-    <p>Once during a pentest on one of the hosts on WI-FI network I discovered a lot of open ports (XML-RPC).</p>
+    <p>Once whule pentesting a WI-FI network I discovered a lot of open ports (XML-RPC) on one of the hosts.</p>
 <!--more-->
-<p>The server kindly answered the garbage I had send:</p>
+<p>The server kindly answered to the garbage I had send:</p>
 <pre><code>BolidXMLRPC/1.10 (Windows NT) ORION-BOLID v1.10</code></pre>
-<p>A bit of googling and I find out that this is an access control system <a href="https://bolid.ru/production/orion/po-orion/po-arm/arm_orion_pro.html">АРМ «Орион Про»</a> of security company <a href="https://bolid.ru/about/">ЗАО НВП «Болид»</a>.</p>
-<p>After reading the documentation I tried the <em>ADMINISTRATOR</em>:<em>ORION</em> on XML-RPC. Success. You can manage the system and the database. But this story is not about that.</p>
+<p>A bit of googling and I find out that that was an access control system <a href="https://bolid.ru/production/orion/po-orion/po-arm/arm_orion_pro.html">АРМ «Орион Про»</a> of the security company <a href="https://bolid.ru/about/">ЗАО НВП «Болид»</a>.</p>
+<p>After reading the documentation I tried to use the <em>ADMINISTRATOR</em>:<em>ORION</em> as credentials. That was successful. I could manage the system as I wanted to. But this story is not about that.</p>
 <p>What if there was a strong password?</p>
-<p>In such an unimaginable case you could use XML-RPC methods that do not require authentication. For example, <em>GetPasswordListWithStatus</em>, <em>GetKeyFullInformation</em>, <em>GetDeviceListAsync</em>, <em>ControlAccess</em>, etc.</p>
-<p>If you want you may open the door via request:</p>
+<p>In that case you would be able to use the XML-RPC methods that do not require authentication. There are plenty of them, e.g. <em>GetPasswordListWithStatus</em>, <em>GetKeyFullInformation</em>, <em>GetDeviceListAsync</em>, <em>ControlAccess</em>, etc.</p>
+<p>If you wanted you could open the door controlled by that “security system” via the request:</p>
 <div class="sourceCode" id="cb2"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true"></a>GET / HTTP/1.1</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true"></a>Host: x.x.x.x:8080</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true"></a>Accept: image/webp,image/apng,image/*,*/*;q=0.8</span>
@@ -120,7 +120,7 @@
 <span id="cb2-67"><a href="#cb2-67" aria-hidden="true"></a>    <span class="kw">&lt;/param&gt;</span></span>
 <span id="cb2-68"><a href="#cb2-68" aria-hidden="true"></a>  <span class="kw">&lt;/params&gt;</span></span>
 <span id="cb2-69"><a href="#cb2-69" aria-hidden="true"></a><span class="kw">&lt;/methodCall&gt;</span></span></code></pre></div>
-<p>Viola! Electronic lock is opened!</p>
+<p>Viola!</p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode xml"><code class="sourceCode xml"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true"></a>HTTP/1.1 200 OK</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true"></a>Connection: Keep-Alive</span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true"></a>Content-Length: 298</span>
@@ -143,14 +143,14 @@
 <span id="cb3-20"><a href="#cb3-20" aria-hidden="true"></a>   <span class="kw">&lt;/param&gt;</span></span>
 <span id="cb3-21"><a href="#cb3-21" aria-hidden="true"></a>   <span class="kw">&lt;/params&gt;</span></span>
 <span id="cb3-22"><a href="#cb3-22" aria-hidden="true"></a><span class="kw">&lt;/methodResponse&gt;</span></span></code></pre></div>
-<p>The <a href="https://bolid.ru/about/">company</a> believes that authentication is not required in access control software. Why do we need such security products?</p>
+<p>The <a href="https://bolid.ru/about/">company</a> that makes the access control systems seems to be not bothered about access control whatsoever.</p>
   </div>
   
 </div>
 
     </div>
     <footer class="p-2 d-flex justify-content-between blog-footer font-weight-lighter border-top">
-      <p>Copyright © 2023 Alexey Pronin</p>
+      <p>Copyright © 2016 -  2023 Alexey Pronin</p>
       <p>Powered by <a href="https://jaspervdj.be/hakyll/">Hakyll</a>.</p>
     </footer>
   </div>
