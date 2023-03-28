@@ -51,10 +51,9 @@
   <div class="mb-4 post-content">
     <p>Processing XML documents requires taking into account the possibility of an XML eXternal Entity injection attack (XXE).</p>
 <p>The vulnerability arises when XML parser processes unverified data containing reference to an external entity.</p>
-<p>XXE belongs to category A4 in <a href="https://www.owasp.org/index.php/Category:OWASP_Top_Ten_Project">OWASP Top 10</a> list of vulnerabilities.</p>
-<p>In this publication, I will review how secure by default the popular XML parsers for Erlang and Elixir are.</p>
+<p>In this publication, I will review how secure the popular XML parsers for Erlang and Elixir are.</p>
 <!--more-->
-<p>I list the parsers in descending order of their popularity and importance.</p>
+<p>I enumerate parsers in descending order of their popularity and importance.</p>
 <h2 id="xmerl">xmerl</h2>
 <p>This parser is included in the Erlang Open Telecom Platform, and some XML libraries use it.</p>
 <p>The parser provides <code>xmerl_scan:file</code> and <code>xmerl_scan:string</code> functions.</p>
@@ -98,7 +97,7 @@
 <span id="cb2-20"><a href="#cb2-20" aria-hidden="true"></a>      <span class="fu">io:format(</span><span class="st">&quot;~p: ~n ~p~n~p&quot;</span><span class="fu">,</span> <span class="fu">[</span><span class="va">Excep</span><span class="fu">,</span> <span class="va">Error</span><span class="fu">,</span> <span class="va">St</span><span class="fu">]),</span></span>
 <span id="cb2-21"><a href="#cb2-21" aria-hidden="true"></a>      <span class="fu">halt(</span><span class="dv">1</span><span class="fu">)</span></span>
 <span id="cb2-22"><a href="#cb2-22" aria-hidden="true"></a>  <span class="kw">end</span><span class="fu">.</span></span></code></pre></div>
-<p>You can also pass the <strong>acc_fun</strong> callback function to accumulate the contents of the entity. It will help to prevent DoS attacks using XML.</p>
+<p>You can also pass the <strong>acc_fun</strong> callback function to prevent DoS attacks using XML.</p>
 <h2 id="erlsom">Erlsom</h2>
 <p>Erlsom is an Erlang XML parsing library. This XML parser has different modes of use.</p>
 <h3 id="sax-mode">SAX mode</h3>
@@ -135,7 +134,7 @@
 <span id="cb4-14"><a href="#cb4-14" aria-hidden="true"></a>  <span class="fu">io:format(</span><span class="st">&quot;~p\n&quot;</span><span class="fu">,</span> <span class="fu">[</span><span class="va">Xml1</span><span class="fu">]).</span></span></code></pre></div>
 <p>In this mode, the injected external entity also triggers an exception <code>{error, "Malformed: Illegal character in literal value"}</code> for Doc1.</p>
 <h3 id="data-binder-mode">Data binder mode</h3>
-<p>In this mode, Erlsom parses the XML document and checks whether the XML document conforms to the Schema.</p>
+<p>In this mode, Erlsom parses an XML document and checks whether it conforms to the Schema.</p>
 <div class="sourceCode" id="cb5"><pre class="sourceCode erlang"><code class="sourceCode erlang"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true"></a><span class="kw">-module</span><span class="fu">(</span><span class="ch">erlsom_binder_test</span><span class="fu">).</span></span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true"></a><span class="kw">-export</span><span class="fu">([</span><span class="ch">main</span><span class="op">/</span><span class="dv">0</span><span class="fu">]).</span></span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true"></a></span>
@@ -163,9 +162,9 @@
 <span id="cb5-25"><a href="#cb5-25" aria-hidden="true"></a>  <span class="fu">io:format(</span><span class="st">&quot;~p\n&quot;</span><span class="fu">,</span> <span class="fu">[</span><span class="va">Xml1</span><span class="fu">]).</span></span></code></pre></div>
 <p>Here we also get an exception for the second document <code>{error, "Malformed: Illegal character in literal value"}</code>.</p>
 <h2 id="xmltomap">XmlToMap</h2>
-<p>This library allows us to create an Elixir map data structure from an XML string using <code>erlsom.simple_form</code>. Thus, here we are protected from XXE.</p>
+<p>This library allows us to create an Elixir map data structure from an XML string using <code>erlsom.simple_form</code>. Thus, consumers are protected from XXE.</p>
 <h2 id="sweetxml">SweetXml</h2>
-<p>SweetXml is a wrapper around xmerl written in Elixir. It allows XXE injection as xmerl:</p>
+<p>SweetXml is a wrapper around xmerl written in Elixir. It allows XXE injection like xmerl does:</p>
 <div class="sourceCode" id="cb6"><pre class="sourceCode elixir"><code class="sourceCode elixir"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true"></a><span class="kw">defmodule</span> <span class="cn">XXE</span> <span class="kw">do</span></span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true"></a>  <span class="im">import</span> <span class="cn">SweetXml</span></span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true"></a>  <span class="kw">def</span> test <span class="kw">do</span></span>
@@ -182,7 +181,7 @@
 <span id="cb6-14"><a href="#cb6-14" aria-hidden="true"></a><span class="kw">end</span></span></code></pre></div>
 <p>The library includes the <code>parse</code> and <code>stream</code> functions. It is possible to pass <a href="#safe_xmerl">xmerl options</a> to them. But there are also the popular <code>xpath</code> and <code>xmap</code> functions which cannot be used securely: <code>parent |&gt; parse |&gt; xpath(spec)</code>.</p>
 <h2 id="saxy">Saxy</h2>
-<p>Saxy does not support parsing DTD and XSD schemas. When encountering DTD, the parser skips that. Also, the parser does not expand external entity references but provides an option to specify how to handle them.</p>
+<p>Saxy does not support parsing DTD and XSD schemas. When encountering DTD, the parser skips that. Also, the parser does not expand external entity references, but provides an option to specify how to handle them.</p>
 <div class="sourceCode" id="cb7"><pre class="sourceCode elixir"><code class="sourceCode elixir"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true"></a><span class="im">import</span> <span class="cn">Saxy</span><span class="op">.</span><span class="cn">XML</span></span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true"></a>doc1 <span class="op">=</span> <span class="st">&quot;&quot;&quot;</span></span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true"></a><span class="st">&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;</span></span>
@@ -201,7 +200,7 @@
 <span id="cb9-5"><a href="#cb9-5" aria-hidden="true"></a><span class="st">&lt;response&gt;&lt;result&gt;&amp;xxe;&lt;/result&gt;&lt;/response&gt;</span></span>
 <span id="cb9-6"><a href="#cb9-6" aria-hidden="true"></a><span class="st">&quot;&quot;&quot;</span></span>
 <span id="cb9-7"><a href="#cb9-7" aria-hidden="true"></a><span class="cn">Quinn</span><span class="op">.</span>parse(doc1)</span></code></pre></div>
-<p>As expected, we get the contents of <code>/etc/passwd</code>. There are no functions in this library that will prevent XXE.</p>
+<p>As expected, we get the contents of <code>/etc/passwd</code>. There are no functions in this library that protects from XXE.</p>
 <h2 id="fast_xml">fast_xml</h2>
 <p>fast_xml is Expat based Erlang XML parsing and manipulation library, with a focus on XML stream parsing.</p>
 <p>Let’s assemble the library and launch the interactive shell <code>erl -pa ebin -pa deps/*/ebin</code> and try to parse a full structure:</p>
